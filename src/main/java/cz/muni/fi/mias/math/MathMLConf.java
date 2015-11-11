@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import cz.muni.fi.mias.MiasError;
+import cz.muni.fi.mias.MIaSError;
 
 /**
  * Helper class containing static MathML configuration
@@ -179,9 +179,9 @@ public class MathMLConf {
         }
     }
 
-    private static void handleError(String msg, Exception e) throws MiasError {
+    private static void handleError(String msg, Exception e) throws MIaSError {
         log.log(Level.SEVERE, msg, e);
-        throw new MiasError(msg, e);
+        throw new MIaSError(msg, e);
     }
 
 }

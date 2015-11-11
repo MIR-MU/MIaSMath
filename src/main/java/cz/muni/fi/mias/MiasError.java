@@ -1,14 +1,14 @@
 package cz.muni.fi.mias;
 
-public class MiasError extends Error {
+public class MIaSError extends Error {
 
     private static final long serialVersionUID = -355428598212227054L;
 
-    public MiasError(String message) {
+    public MIaSError(String message) {
         super(message);
     }
 
-    public MiasError(String message, Throwable cause) {
+    public MIaSError(String message, Throwable cause) {
         super(message, cause);
     }
 
