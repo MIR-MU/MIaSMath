@@ -60,6 +60,7 @@ public class MathTokenizer extends Tokenizer {
     private float lCoef = 0.7f;
     private float vCoef = 0.8f;
     private float cCoef = 0.5f;
+    private float oCoef = 0.6f;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
     private final MathMLType mmlType;
@@ -82,8 +83,7 @@ public class MathTokenizer extends Tokenizer {
     
     /**
      * @param input Reader containing the input to process
-     * @param subformulae if true, subformulae will be extracted
-     * @param mmldtd Path to MathML DTD file
+     * @param subformulae if true, subformulae will be
      * @param type type of MathML that should be processed
      */
     public MathTokenizer(Reader input, boolean subformulae, MathMLType type) {
@@ -173,7 +173,7 @@ public class MathTokenizer extends Tokenizer {
      * InputStream.
      * Internal representation of the formula is w3c.dom.Node.
      *
-     * @param is InputStream with the formuale.
+     * @param input InputStream with the formuale.
      * @return Collection of the formulae in the form of Map<Double, List<String>>.
      *         this map gives pairs {created formula, it's rank}. Key of the map is the
      *         rank of the all formulae located in the list specified by the value of the Map.Entry.
@@ -187,7 +187,7 @@ public class MathTokenizer extends Tokenizer {
                 load(doc);
                 order();
                 modify();
-//            printMap(formulae);
+//                printMap(formulae);
                 if (subformulae) {
                     for (List<Formula> forms : formulae.values()) {
                         producedF.addAndGet(forms.size());
@@ -254,8 +254,8 @@ public class MathTokenizer extends Tokenizer {
             if (!MathMLConf.ignoreNodeAndChildren(name)) {
                 boolean store = false;
                 if ((mmlType==MathMLType.BOTH && MathMLConf.isIndexableElement(name)) ||
-                    (mmlType==MathMLType.PRESENTATION && MathMLConf.isPresentationElement(name)) || 
-                    (mmlType==MathMLType.CONTENT && MathMLConf.isContentElement(name))) {
+                    (mmlType==MathMLType.PRESENTATION && MathMLConf.isIndexablePresentationElement(name)) ||
+                    (mmlType==MathMLType.CONTENT && MathMLConf.isIndexableContentElement(name))) {
                     store = true;
                 }
                 removeTextNodes(n);
@@ -273,7 +273,7 @@ public class MathTokenizer extends Tokenizer {
             }
         }
     }
-    
+
     /**
      * Removes unnecessary text nodes from the markup
      * 
@@ -500,6 +500,7 @@ public class MathTokenizer extends Tokenizer {
     private void modify() {
         unifyVariables(vCoef);
         unifyConst(cCoef);
+        unifyOperators(oCoef);
         processAttributes(aCoef);
     }
     
@@ -624,6 +625,61 @@ public class MathTokenizer extends Tokenizer {
         return result;
     }
 
+
+    /**
+     * Performing unifying of all operators in the formula by substituting them for "+" string.
+     *
+     * @param rank Specifies how the method should alter modified formulae weight
+     */
+    private void unifyOperators(float rank) {
+        List<Formula> result = new ArrayList<Formula>();
+        for (List<Formula> forms : formulae.values()) {
+            result.clear();
+            for (Formula f : forms) {
+                Node node = f.getNode();
+                NodeList nl = node.getChildNodes();
+                boolean hasElement = true;
+                if (((nl.getLength() == 1) && !(nl.item(0) instanceof Element)) || nl.getLength() == 0) {
+                    hasElement = false;
+                }
+                if (hasElement) {
+                    Node newNode = node.cloneNode(true);
+                    boolean changed = unifyOperatorsNode(newNode);
+                    if (changed) {
+                        result.add(new Formula(newNode, f.getWeight() * rank));
+                    }
+                }
+            }
+            forms.addAll(result);
+        }
+    }
+
+    /**
+     * Recursively modifying operators of the formula or subformula specified by given Node
+     *
+     * @param node Node representing current formula or subformula that is being modified
+     * @return Saying whether or not this formula was modified
+     */
+    private boolean unifyOperatorsNode(Node node) {
+        boolean result = false;
+        if (node instanceof Element) {
+            NodeList nl = node.getChildNodes();
+            for (int j = 0; j < nl.getLength(); j++) {
+                result = unifyOperatorsNode(nl.item(j)) == false ? result : true;
+            }
+            if (node.getLocalName().equals(MathMLConstants.PMML_MO)) {
+                node.setTextContent("+");
+                return true;
+            } else if (MathMLConf.isOperatorElement(node.getLocalName())) {
+                Node unifiedCmmlOperator = node.getOwnerDocument().createElement("op");
+                node.getParentNode().replaceChild(unifiedCmmlOperator, node);
+                return true;
+            }
+        }
+        return result;
+    }
+
+
     /**
      * @return Processed formulae to be used for a query. No subformulae are extracted.
      */
@@ -641,9 +697,8 @@ public class MathTokenizer extends Tokenizer {
         for (Map.Entry<Integer, List<Formula>> entry : formulae.entrySet()) {
             List<Formula> forms = entry.getValue();
             for (Formula f : forms) {
-                LOG.info(entry.getKey() + " " + nodeToString(f.getNode(), false) + " " + f.getWeight());
+                System.out.println(entry.getKey() + " " + nodeToString(f.getNode(), false) + " " + f.getWeight());
             }
-            LOG.info("");
         }
     }
 

@@ -27,8 +27,8 @@ public class CountNodesFormulaValuator implements FormulaValuator {
             if (!MathMLConf.ignoreNodeAndChildren(name)) {
                 boolean count = false;
                 if (((mmlType == MathTokenizer.MathMLType.BOTH && MathMLConf.isIndexableElement(name))
-                        || (mmlType == MathTokenizer.MathMLType.PRESENTATION && MathMLConf.isPresentationElement(name))
-                        || (mmlType == MathTokenizer.MathMLType.CONTENT && MathMLConf.isContentElement(name)))) {
+                        || (mmlType == MathTokenizer.MathMLType.PRESENTATION && MathMLConf.isIndexablePresentationElement(name))
+                        || (mmlType == MathTokenizer.MathMLType.CONTENT && MathMLConf.isIndexableContentElement(name)))) {
                     count = true;
                 }
                 NodeList nl = n.getChildNodes();

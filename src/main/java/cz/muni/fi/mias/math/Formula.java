@@ -80,7 +80,7 @@ public class Formula {
     public static String nodeToString(Node node, boolean withoutTextContent, Map<String, String> eldict, Map<String, String> attrdict, List<String> ignoreNode) {
         String s = "";
         if (node instanceof Element) {
-            String name = node.getLocalName();
+            String name = node.getLocalName() != null ? node.getLocalName() : node.getNodeName();
             if (!ignoreNode.contains(name)) {
                 if (eldict.get(name) == null || withoutTextContent) {
                     s += name;

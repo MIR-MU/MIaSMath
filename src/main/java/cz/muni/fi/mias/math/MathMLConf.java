@@ -9,7 +9,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -27,28 +26,25 @@ import cz.muni.fi.mias.MIaSError;
 public class MathMLConf {
     
     private static final Logger log = Logger.getLogger(MathTokenizer.class.getName());
-    
-    private static final String[] ignoreNodeArray =
-        {"semantics", "annotation-xml"};
-    private static List<String> ignoreNode = new ArrayList<String>(Arrays.asList(ignoreNodeArray));
-    private static final String[] ignoreAllArray = {"annotation"};
-    private static List<String> ignoreAll = new ArrayList<String>(Arrays.asList(ignoreAllArray));
-    
-    private static final String[] presentationArray = {"mi","mn","mo","mtext","mspace","ms","mglyph","mrow","mfrac","msqrt","mroot","mstyle","merror",
-        "mpadded","mphantom","mfenced","menclose","msub","msup","msubsup","munder","mover","munderover","mmultiscripts","mtable","mlabeledtr","mtr","mtd"};
-    private static List<String> presentationElements = new ArrayList<String>(Arrays.asList(presentationArray));
-    
-    private static final String[] contentArray = {"ci","cn","csymbol","apply","cs","bind","bvar","share","cerror","cbytes","set","domainofapplication",
-        "interval","condition","lowlimit","uplimit","degree","momentabout","logbase","union","piecewise","piece","otherwise","reln","fn","declare","ident",
-        "domain","codomain","image","ln","log","moment","lambda","compose","quotient","divide","minues","power","rem","root","factorial","abs","conjugate",
-        "arg","real","imaginary","floor","ceiling","exp","max","min","plus","times","gcd","lcm","and","or","xor","not","implies","equivalent","forall",
-        "exists","eq","gt","lt","geq","leq","neq","approx","factorof","tendsto","int","diff","partialdiff","divergence","grad","curl","laplacian","set",
-        "\\list","union","intersect","cartesianproduct","in","notin","notsubset","notprsubset","setdiff","subset","prsubset","card","sum","product",
-        "limit","sin","cos","tan","sec","csc","cot","sinh","cosh","tanh","sech","csch","coth","arcsin","arccos","arctan","arccosh","arccot","arccoth",
-        "arccsc","arccsch","arcsec","arccsch","arcsec","arcsinh","arctanh","mean","sdev","variance","median","mode","vector","matrix","matrixrow",
-        "determinant","transpose","selector","vectorproduct","scalarproduct","outerproduct","integers","reals","rationals","naturalnumbers","complexes",
-        "primes","emptyset","exponentiale","imaginaryi","notanumber","true","false","pi","eulergamma","infinity"};
-    private static List<String> contentElements = new ArrayList<String>(Arrays.asList(contentArray));
+
+    private static List<String> ignoreNode = Arrays.asList("semantics", "annotation-xml");
+    private static List<String> ignoreAll = Arrays.asList("annotation");
+
+    private static List<String> presentationElements = Arrays.asList("mi","mn","mo","mtext","mspace","ms","mglyph","mrow","mfrac","msqrt","mroot","mstyle","merror",
+            "mpadded","mphantom","mfenced","menclose","msub","msup","msubsup","munder","mover","munderover","mmultiscripts","mtable","mlabeledtr","mtr","mtd");
+
+    private static List<String> contentElements = Arrays.asList("ci","cn","csymbol","apply","cs","bind","bvar","share","cerror","cbytes","set","domainofapplication",
+            "interval","condition","lowlimit","uplimit","degree","momentabout","logbase","union","piecewise","piece","otherwise","reln","fn","declare","ident",
+            "domain","codomain","image","ln","log","moment","lambda","compose","quotient","divide","minues","power","rem","root","factorial","abs","conjugate",
+            "arg","real","imaginary","floor","ceiling","exp","max","min","plus","times","gcd","lcm","and","or","xor","not","implies","equivalent","forall",
+            "exists","eq","gt","lt","geq","leq","neq","approx","factorof","tendsto","int","diff","partialdiff","divergence","grad","curl","laplacian","set",
+            "\\list","union","intersect","cartesianproduct","in","notin","notsubset","notprsubset","setdiff","subset","prsubset","card","sum","product",
+            "limit","sin","cos","tan","sec","csc","cot","sinh","cosh","tanh","sech","csch","coth","arcsin","arccos","arctan","arccosh","arccot","arccoth",
+            "arccsc","arccsch","arcsec","arccsch","arcsec","arcsinh","arctanh","mean","sdev","variance","median","mode","vector","matrix","matrixrow",
+            "determinant","transpose","selector","vectorproduct","scalarproduct","outerproduct","integers","reals","rationals","naturalnumbers","complexes",
+            "primes","emptyset","exponentiale","imaginaryi","notanumber","true","false","pi","eulergamma","infinity");
+
+    private static List<String> operatorElements = (Arrays.asList("mo","times","plus","minus","power","log","max","min","divide","ln","log","lambda","and","or","xor","implies","equivalen","forall","exists","int"));
     
     public static final String MATHML_NAMESPACE_URI = "http://www.w3.org/1998/Math/MathML";
 
@@ -149,16 +145,20 @@ public class MathMLConf {
         return result;
     }
     
-    public static boolean isContentElement(String s) {
-        return getContentElements().contains(s);
+    public static boolean isIndexableContentElement(String s) {
+        return getContentElements().contains(s) && !isOperatorElement(s);
     }
     
-    public static boolean isPresentationElement(String s) {
-        return getPresentationElements().contains(s);
+    public static boolean isIndexablePresentationElement(String s) {
+        return getPresentationElements().contains(s) && !isOperatorElement(s);
     }
     
     public static boolean isIndexableElement(String s) {
-        return isContentElement(s) || isPresentationElement(s);
+        return isIndexableContentElement(s) || isIndexablePresentationElement(s);
+    }
+
+    public static boolean isOperatorElement(String s) {
+        return operatorElements.contains(s);
     }
     
     public static boolean ignoreNode(String s) {
