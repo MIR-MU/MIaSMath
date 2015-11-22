@@ -24,6 +24,7 @@ public class Formula {
     private float weight;
     private Node node;
     private String miasString;
+    private static final int LENGTH_TRIM = 20000;
 
     public Formula() {
     }
@@ -78,14 +79,14 @@ public class Formula {
      * @return M-terms styles string representing the input MathML formula
      */
     public static String nodeToString(Node node, boolean withoutTextContent, Map<String, String> eldict, Map<String, String> attrdict, List<String> ignoreNode) {
-        String s = "";
+        StringBuilder s = new StringBuilder();
         if (node instanceof Element) {
             String name = node.getLocalName() != null ? node.getLocalName() : node.getNodeName();
             if (!ignoreNode.contains(name)) {
                 if (eldict.get(name) == null || withoutTextContent) {
-                    s += name;
+                    s.append(name);
                 } else {
-                    s += eldict.get(name);
+                    s.append(eldict.get(name));
                 }
                 if (!withoutTextContent) {
                     NamedNodeMap attrs = node.getAttributes();
@@ -95,7 +96,7 @@ public class Formula {
                             String dictAttrName = attrdict.get(attrName);
                             String attrValue = attrs.item(i).getNodeValue();
                             String dictValue = attrdict.get(attrValue);
-                            s += "[" + dictAttrName + "=" + (dictValue == null ? attrValue : dictValue) + "]";
+                            s.append("[").append(dictAttrName).append("=").append(dictValue == null ? attrValue : dictValue).append("]");
                         }
 
                     }
@@ -103,24 +104,27 @@ public class Formula {
                 NodeList nl = node.getChildNodes();
                 int length = nl.getLength();
                 if ((length > 1)) {
-                    s += "(";
+                    s.append("(");
                     for (int j = 0; j < length; j++) {
-                        s += nodeToString(nl.item(j), withoutTextContent, eldict, attrdict, ignoreNode);
+                        s.append(nodeToString(nl.item(j), withoutTextContent, eldict, attrdict, ignoreNode));
                     }
-                    s += ")";
+                    s.append(")");
                 } else {
                     if (name.equals("mrow") || name.equals("math") || name.equals("mfenced")) {
                         if (length == 1) {
-                            s = nodeToString(node.getFirstChild(), withoutTextContent, eldict, attrdict, ignoreNode);
+                            s.append(nodeToString(node.getFirstChild(), withoutTextContent, eldict, attrdict, ignoreNode));
                         } else {
-                            s = "";
+                            s = new StringBuilder();
                         }
                     } else if (!withoutTextContent) {
-                        s += "(" + node.getTextContent() + ")";
+                        s.append("(").append(node.getTextContent()).append(")");
                     }
                 }
             }
         }
-        return s;
+        if (s.length() > LENGTH_TRIM) {
+            return s.substring(0, LENGTH_TRIM);
+        }
+        return s.toString();
     }
 }
