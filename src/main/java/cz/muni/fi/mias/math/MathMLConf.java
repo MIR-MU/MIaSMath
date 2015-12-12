@@ -27,10 +27,10 @@ public class MathMLConf {
     
     private static final Logger log = Logger.getLogger(MathTokenizer.class.getName());
 
-    private static List<String> ignoreNode = Arrays.asList("semantics", "annotation-xml");
-    private static List<String> ignoreAll = Arrays.asList("annotation");
+    private static final List<String> ignoreNode = Arrays.asList("semantics", "annotation-xml");
+    private static final List<String> ignoreAll = Arrays.asList("annotation");
 
-    private static List<String> presentationElements = Arrays.asList("mi","mn","mo","mtext","mspace","ms","mglyph","mrow","mfrac","msqrt","mroot","mstyle","merror",
+    private static final List<String> presentationElements = Arrays.asList("mi","mn","mo","mtext","mspace","ms","mglyph","mrow","mfrac","msqrt","mroot","mstyle","merror",
             "mpadded","mphantom","mfenced","menclose","msub","msup","msubsup","munder","mover","munderover","mmultiscripts","mtable","mlabeledtr","mtr","mtd");
 
     private static List<String> contentElements = Arrays.asList("ci","cn","csymbol","apply","cs","bind","bvar","share","cerror","cbytes","set","domainofapplication",
@@ -44,7 +44,11 @@ public class MathMLConf {
             "determinant","transpose","selector","vectorproduct","scalarproduct","outerproduct","integers","reals","rationals","naturalnumbers","complexes",
             "primes","emptyset","exponentiale","imaginaryi","notanumber","true","false","pi","eulergamma","infinity");
 
-    private static List<String> operatorElements = (Arrays.asList("mo","times","plus","minus","power","log","max","min","divide","ln","log","lambda","and","or","xor","implies","equivalen","forall","exists","int"));
+    private static final List<String> operatorElements = (Arrays.asList("mo","times","plus","minus","power","log","max","min","divide","ln","log","lambda","and","or","xor","implies","equivalen","forall","exists","int"));
+
+    public static final List<String> additiveOperators = (Arrays.asList("-", "−", "∓", "∔", "∸", "⊕", "⊖", "⊝", "⊞", "⊟", "plus", "minus"));
+
+    public static final String timesOperators = "\u2062 × ·";
     
     public static final String MATHML_NAMESPACE_URI = "http://www.w3.org/1998/Math/MathML";
 

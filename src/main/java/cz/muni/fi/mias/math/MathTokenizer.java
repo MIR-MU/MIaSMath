@@ -60,7 +60,7 @@ public class MathTokenizer extends Tokenizer {
     private float lCoef = 0.7f;
     private float vCoef = 0.8f;
     private float cCoef = 0.5f;
-    private float oCoef = 0.6f;
+    private float oCoef = 0.8f;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
     private final MathMLType mmlType;
@@ -187,7 +187,7 @@ public class MathTokenizer extends Tokenizer {
                 load(doc);
                 order();
                 modify();
-//                printMap(formulae);
+                printMap(formulae);
                 if (subformulae) {
                     for (List<Formula> forms : formulae.values()) {
                         producedF.addAndGet(forms.size());
@@ -667,10 +667,11 @@ public class MathTokenizer extends Tokenizer {
             for (int j = 0; j < nl.getLength(); j++) {
                 result = unifyOperatorsNode(nl.item(j)) == false ? result : true;
             }
-            if (node.getLocalName().equals(MathMLConstants.PMML_MO)) {
+            if (node.getLocalName().equals(MathMLConstants.PMML_MO) &&
+                    MathMLConf.additiveOperators.contains(node.getTextContent())) {
                 node.setTextContent("+");
                 return true;
-            } else if (MathMLConf.isOperatorElement(node.getLocalName())) {
+            } else if (MathMLConf.additiveOperators.contains(node.getLocalName())) {
                 Node unifiedCmmlOperator = node.getOwnerDocument().createElement("op");
                 node.getParentNode().replaceChild(unifiedCmmlOperator, node);
                 return true;
