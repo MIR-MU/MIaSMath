@@ -83,7 +83,7 @@ public class MathTokenizer extends Tokenizer {
     
     /**
      * @param input Reader containing the input to process
-     * @param subformulae if true, subformulae will be
+     * @param subformulae if true, subformulae will be extracted
      * @param type type of MathML that should be processed
      */
     public MathTokenizer(Reader input, boolean subformulae, MathMLType type) {
