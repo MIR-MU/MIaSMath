@@ -46,9 +46,9 @@ public class MathMLConf {
 
     private static final List<String> operatorElements = (Arrays.asList("mo","times","plus","minus","power","log","max","min","divide","ln","log","lambda","and","or","xor","implies","equivalen","forall","exists","int"));
 
-    public static final List<String> additiveOperators = (Arrays.asList("-", "−", "∓", "∔", "∸", "⊕", "⊖", "⊝", "⊞", "⊟", "plus", "minus"));
+    public static final List<String> additiveOperators = (Arrays.asList("-", "\u2212", "\u2213", "\u2214", "\u2238", "\u2295", "\u2296", "\u229d", "\u229e", "\u229f", "plus", "minus"));
 
-    public static final String timesOperators = "\u2062 × ·";
+    public static final String timesOperators = "\u2062 \u00d7 \u00b7";
     
     public static final String MATHML_NAMESPACE_URI = "http://www.w3.org/1998/Math/MathML";
 
