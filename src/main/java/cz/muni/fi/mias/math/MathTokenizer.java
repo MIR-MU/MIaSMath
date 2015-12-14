@@ -526,7 +526,7 @@ public class MathTokenizer extends Tokenizer {
     private void modify() {
         unifyVariables(vCoef);
         unifyConst(cCoef);
-        unifyOperators(oCoef);
+        //unifyOperators(oCoef);
         processAttributes(aCoef);
     }
     
