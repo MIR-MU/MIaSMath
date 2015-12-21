@@ -16,7 +16,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-import org.apache.commons.io.input.ReaderInputStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
@@ -30,6 +29,11 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
+import static cz.muni.fi.mir.mathmlcanonicalization.Settings.getStreamFromProperty;
+import org.jdom2.input.SAXBuilder;
+import org.jdom2.input.sax.XMLReaders;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
 
 /**
  * Implementation of Lucene Tokenizer. Provides math formulae contained in the input as
@@ -76,6 +80,9 @@ public class MathTokenizer extends Tokenizer {
     private Iterator<List<Formula>> itMap = Collections.<List<Formula>> emptyList().iterator();
     private Iterator<Formula> itForms = Collections.<Formula> emptyList().iterator();
     private int increment;
+  
+    private static final String XHTMLPlusMATHMLPlusSVGDTD = "dtdXHTMLPlusMathMLPlusSVG";
+    final SAXBuilder builder = new SAXBuilder();
     
     public enum MathMLType {
         CONTENT, PRESENTATION, BOTH
@@ -97,6 +104,24 @@ public class MathTokenizer extends Tokenizer {
             vCoef = 1;
             cCoef = 1;
         }
+        
+        builder.setXMLReaderFactory(XMLReaders.NONVALIDATING);
+        builder.setFeature("http://xml.org/sax/features/validation", false);
+        builder.setFeature("http://xml.org/sax/features/external-general-entities", true);
+        builder.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", true);
+        builder.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", true);
+        builder.setEntityResolver(new EntityResolver() {
+            @Override
+            public InputSource resolveEntity(String publicId, String systemId) {
+                if (publicId.equalsIgnoreCase("-//W3C//DTD XHTML 1.1 plus MathML 2.0 plus SVG 1.1//EN")
+                        || publicId.equalsIgnoreCase("-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN")
+                        || systemId.endsWith("xhtml-math11-f.dtd")) {
+                    return new InputSource(getStreamFromProperty(XHTMLPlusMATHMLPlusSVGDTD));
+                }
+                return null;
+            }
+        });
+        
     }
     
     /**
@@ -208,7 +233,8 @@ public class MathTokenizer extends Tokenizer {
         Document doc;
         
         try {
-            org.jdom2.Document jdom2Doc = canonicalizer.canonicalize(new ReaderInputStream(input, "UTF-8"));            
+            //org.jdom2.Document jdom2Doc = canonicalizer.canonicalize(new ReaderInputStream(input, "UTF-8"));
+            org.jdom2.Document jdom2Doc = builder.build(input);
             doc = outputter.output(jdom2Doc);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Input could not be parsed (probably it is not valid MathML)", e);
