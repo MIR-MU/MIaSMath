@@ -30,6 +30,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
+import cz.muni.fi.mir.mathmlunificator.MathMLUnificator;
 
 /**
  * Implementation of Lucene Tokenizer. Provides math formulae contained in the input as
@@ -210,6 +211,7 @@ public class MathTokenizer extends Tokenizer {
         try {
             org.jdom2.Document jdom2Doc = canonicalizer.canonicalize(new ReaderInputStream(input, "UTF-8"));            
             doc = outputter.output(jdom2Doc);
+            MathMLUnificator.unifyMathML(doc);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Input could not be parsed (probably it is not valid MathML)", e);
             doc = null;
