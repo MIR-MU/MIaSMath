@@ -460,7 +460,9 @@ public class MathTokenizer extends Tokenizer {
      * Converts a node to M-term styled string representation
      */
     private String nodeToString(Node node, boolean withoutTextContent) {
-        return Formula.nodeToString(node, withoutTextContent, eldict, attrdict, MathMLConf.getIgnoreNode());
+        StringBuilder builder = new StringBuilder();        
+        Formula.nodeToString(builder, node, withoutTextContent, eldict, attrdict, MathMLConf.getIgnoreNode());
+        return builder.toString();
     }
 
     /**

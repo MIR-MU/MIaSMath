@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -24,7 +25,6 @@ public class Formula {
     private float weight;
     private Node node;
     private String miasString;
-    private static final int LENGTH_TRIM = 20000;
 
     public Formula() {
     }
@@ -65,7 +65,15 @@ public class Formula {
 
     @Override
     public String toString() {
-        return "Formula{" + "weight=" + weight + "node=" + nodeToString(node, false, new HashMap<String, String>(), new HashMap<String, String>(), new ArrayList<String>()) + '}';
+        StringBuilder builder = new StringBuilder();
+        
+        builder.append("Formula{weight=").append(weight).append("node=");
+        
+        nodeToString(builder, node, false, new HashMap<String, String>(), new HashMap<String, String>(), new ArrayList<String>());
+        
+        builder.append('}');
+        
+        return builder.toString();
     }
     
     /**
@@ -75,56 +83,67 @@ public class Formula {
      * @param withoutTextContent if true, resulting string will not contain text content of MathML nodes
      * @param eldict dictionary for substituting standard MathML element names for custom ones
      * @param attrdict dictionary for substituting standard MathML attribute names and their values for custom ones
-     * @param ignoreNode a list of MathML nodes which the output should not contain
+     * @param ignorableNodes a list of MathML nodes which the output should not contain
      * @return M-terms styles string representing the input MathML formula
      */
-    public static String nodeToString(Node node, boolean withoutTextContent, Map<String, String> eldict, Map<String, String> attrdict, List<String> ignoreNode) {
-        StringBuilder s = new StringBuilder();
-        if (node instanceof Element) {
-            String name = node.getLocalName();
-            if (!ignoreNode.contains(name)) {
-                if (eldict.get(name) == null || withoutTextContent) {
-                    s.append(name);
-                } else {
-                    s.append(eldict.get(name));
-                }
-                if (!withoutTextContent) {
-                    NamedNodeMap attrs = node.getAttributes();
-                    for (int i = 0; i < attrs.getLength(); i++) {
-                        String attrName = attrs.item(i).getNodeName();
-                        if (attrdict.containsKey(attrName)) {
-                            String dictAttrName = attrdict.get(attrName);
-                            String attrValue = attrs.item(i).getNodeValue();
-                            String dictValue = attrdict.get(attrValue);
-                            s.append("[").append(dictAttrName).append("=").append(dictValue == null ? attrValue : dictValue).append("]");
+    public static void nodeToString(StringBuilder builder, Node node, boolean withoutTextContent,
+            Map<String, String> eldict, Map<String, String> attrdict, List<String> ignorableNodes) {
+        
+        if (shouldIgnoreNode(node, ignorableNodes)) {
+            // do nothing
+            return;
+        }
+        
+        String name = node.getLocalName();
+        NodeList children = node.getChildNodes();
+        int childrenSize = children.getLength();
+
+        if (isMrowOrMathOrMfenced(name) && childrenSize <= 1) {
+            if (childrenSize == 1) {
+                nodeToString(builder, node.getFirstChild(), withoutTextContent, eldict, attrdict, ignorableNodes);
+            }
+        } else {
+            String normalizedName = eldict.get(name);
+            if (normalizedName == null || withoutTextContent) {
+                builder.append(name);
+            } else {
+                builder.append(normalizedName);
+            }
+
+            if (! withoutTextContent) {
+                NamedNodeMap attrs = node.getAttributes();
+                for (int i = 0; i < attrs.getLength(); i++) {
+                    String attrName = attrs.item(i).getNodeName();
+                    if (attrdict.containsKey(attrName)) {
+                        String dictAttrName = attrdict.get(attrName);
+                        String attrValue = attrs.item(i).getNodeValue();
+                        String dictValue = attrdict.get(attrValue);
+                        if (dictValue==null) {
+                            dictValue = attrValue;
                         }
 
-                    }
-                }
-                NodeList nl = node.getChildNodes();
-                int length = nl.getLength();
-                if ((length > 1)) {
-                    s.append("(");
-                    for (int j = 0; j < length; j++) {
-                        s.append(nodeToString(nl.item(j), withoutTextContent, eldict, attrdict, ignoreNode));
-                    }
-                    s.append(")");
-                } else {
-                    if (name.equals("mrow") || name.equals("math") || name.equals("mfenced")) {
-                        if (length == 1) {
-                            s.append(nodeToString(node.getFirstChild(), withoutTextContent, eldict, attrdict, ignoreNode));
-                        } else {
-                            s = new StringBuilder();
-                        }
-                    } else if (!withoutTextContent) {
-                        s.append("(").append(node.getTextContent()).append(")");
+                        builder.append("[").append(dictAttrName).append("=").append(dictValue).append("]");
                     }
                 }
             }
+
+            if (childrenSize > 1) {
+                builder.append("(");
+                for (int j = 0; j < childrenSize; j++) {
+                    nodeToString(builder, children.item(j), withoutTextContent, eldict, attrdict, ignorableNodes);
+                }
+                builder.append(")");
+            } else if (! withoutTextContent) {
+                builder.append("(").append(node.getTextContent()).append(")");
+            }
         }
-        if (s.length() > LENGTH_TRIM) {
-            return s.substring(0, LENGTH_TRIM);
-        }
-        return s.toString();
+    }
+
+    private static boolean shouldIgnoreNode(Node node, List<String> ignorableNodes) {
+        return !(node instanceof Element) || ignorableNodes.contains(node.getLocalName());
+    }
+
+    private static boolean isMrowOrMathOrMfenced(String name) {
+        return name.equals("mrow") || name.equals("math") || name.equals("mfenced");
     }
 }
