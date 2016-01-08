@@ -8,21 +8,25 @@ import org.apache.lucene.analysis.util.TokenizerFactory;
 import org.apache.lucene.util.AttributeFactory;
 
 /**
- * Factory used for calling MathTokenizer from SOLR environment.
- * The following attributes must be specified in the schema.xml file for tokenizer MathTokenizer:
+ * Factory used for calling MathTokenizer from SOLR environment. The following
+ * attributes must be specified in the schema.xml file for tokenizer
+ * MathTokenizer:
  * <ul>
- *   <li>subformulae - true for analyzer type index, false for analyzer type query</li>
+ * <li>subformulae - true for analyzer type index, false for analyzer type
+ * query</li>
  * </ul>
- * 
+ *
  * Complete example:
- * <fieldType name="math" class="solr.TextField">
- *   <analyzer type="index">
- *     <tokenizer class="cz.muni.fi.mias.MathTokenizerFactory" subformulae="true"  /> 
- *   </analyzer>
- *   <analyzer type="query">
- *     <tokenizer class="cz.muni.fi.mias.MathTokenizerFactory" subformulae="false" /> 
- *   </analyzer>
- * </fieldType>
+ * <pre>
+ * &lt;fieldType name=&quot;math&quot; class=&quot;solr.TextField&quot;&gt;
+ *   &lt;analyzer type=&quot;index&quot;&gt;
+ *     &lt;tokenizer class=&quot;cz.muni.fi.mias.MathTokenizerFactory&quot; subformulae=&quot;true&quot;  /&gt;
+ *   &lt;/analyzer&gt;
+ *   &lt;analyzer type=&quot;query&quot;&gt;
+ *     &lt;tokenizer class=&quot;cz.muni.fi.mias.MathTokenizerFactory&quot; subformulae=&quot;false&quot; /&gt;
+ *   &lt;/analyzer&gt;
+ * &lt;/fieldType&gt;
+ * </pre>
  *
  * @author Martin Liska
  */

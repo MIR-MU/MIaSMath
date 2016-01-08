@@ -1,26 +1,28 @@
 package cz.muni.fi.mias.math;
 
 /**
+ * Class providing functionality to separate text content from the formulae in
+ * the given input.
  *
- * Class providing functionality to separate text content from the formulae in the given input.
- * 
  * @author Martin Liska
  * @since 14.5.2010
  */
 public class MathSeparator {
 
-    private MathSeparator() {}
+    private MathSeparator() {
+    }
 
     /**
      * Separates normal text and MathML formulae with given prefix.
      *
      * @param content String input to be separated.
      * @param prefix Prefix of MathML notation in given content.
-     * @return String field of size 2. [0] holds seoparated text and [1] holds separated formulae.
+     * @return String field of size 2. [0] holds seoparated text and [1] holds
+     * separated formulae.
      */
     public static String[] separate(String content, String prefix) {
-        if (prefix!=null && prefix.trim().length()>0) {
-            prefix = prefix+":";
+        if (prefix != null && prefix.trim().length() > 0) {
+            prefix = prefix + ":";
         } else {
             prefix = "";
         }

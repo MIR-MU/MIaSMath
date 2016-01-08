@@ -1,13 +1,8 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package cz.muni.fi.mias.math;
 
 /**
  * Helper class for converting different number types for payloads
- * 
+ *
  * @author Martin Liska
  */
 public class PayloadHelper extends org.apache.lucene.analysis.payloads.PayloadHelper {
@@ -21,27 +16,27 @@ public class PayloadHelper extends org.apache.lucene.analysis.payloads.PayloadHe
         data[1] = (byte) payload;
         return data;
     }
-    
+
     /**
      * Converts byte array to short number
      */
     public static short decodeShort(byte[] bytes) {
-        return (short)(((bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF));
+        return (short) (((bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF));
     }
 
     /**
      * Converts float number to byte array
      */
     public static byte[] encodeFloatToShort(float f) {
-        return encodeShort((short)(Math.round(Math.log10(f) * 3276)+32768));
+        return encodeShort((short) (Math.round(Math.log10(f) * 3276) + 32768));
     }
 
     /**
      * Converts byte array to float number
      */
     public static float decodeFloatFromShortBytes(byte[] bytes) {
-        float result = (float)decodeShort(bytes);
-        return result/10000;
+        float result = (float) decodeShort(bytes);
+        return result / 10000;
     }
 
 }

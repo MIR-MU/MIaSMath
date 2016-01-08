@@ -1,8 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package cz.muni.fi.mias.math;
 
 import org.w3c.dom.Element;
@@ -11,7 +6,7 @@ import org.w3c.dom.NodeList;
 
 /**
  * Formula valuator which values formula's complexity on the number of its nodes
- * 
+ *
  * @author Martin Liska
  */
 public class CountNodesFormulaValuator implements FormulaValuator {
