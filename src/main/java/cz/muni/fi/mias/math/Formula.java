@@ -139,6 +139,13 @@ public class Formula {
         }
     }
 
+    public static String nodeToString(Node node, boolean withoutTextContent,
+                                    Map<String, String> eldict, Map<String, String> attrdict, List<String> ignorableNodes) {
+        StringBuilder builder = new StringBuilder();
+        nodeToString(builder, node, withoutTextContent,  eldict, attrdict, ignorableNodes);
+        return builder.toString();
+    }
+
     private static boolean shouldIgnoreNode(Node node, List<String> ignorableNodes) {
         return !(node instanceof Element) || ignorableNodes.contains(node.getLocalName());
     }
