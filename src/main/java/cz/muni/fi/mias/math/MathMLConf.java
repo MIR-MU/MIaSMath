@@ -47,6 +47,13 @@ public class MathMLConf {
 
     public static final String MATHML_NAMESPACE_URI = "http://www.w3.org/1998/Math/MathML";
 
+    /**
+     * Threshold for adding unified version of a formula to the index. Formulae
+     * with weight coefficient under this threshold will be discarded from
+     * further processing.
+     */
+    public static final float unifiedNodeWeightCoefThreshold = 0.1f;
+
     public static List<String> getPresentationElements() {
         return presentationElements;
     }

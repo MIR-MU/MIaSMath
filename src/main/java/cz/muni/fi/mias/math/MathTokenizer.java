@@ -79,6 +79,7 @@ public class MathTokenizer extends Tokenizer {
     public enum MathMLType {
 
         CONTENT, PRESENTATION, BOTH
+
     }
 
     /**
@@ -212,7 +213,6 @@ public class MathTokenizer extends Tokenizer {
         try {
             org.jdom2.Document jdom2Doc = canonicalizer.canonicalize(new ReaderInputStream(input, "UTF-8"));
             doc = outputter.output(jdom2Doc);
-            MathMLUnificator.unifyMathML(doc);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Input could not be parsed (probably it is not valid MathML)", e);
             doc = null;
@@ -236,11 +236,8 @@ public class MathTokenizer extends Tokenizer {
         for (int i = 0; i < list.getLength(); i++) {
             Node node = list.item(i);
             formulae.put(i, new ArrayList<Formula>());
-            if (subformulae) {
-                loadNode(node, 1 / valuator.count(node, mmlType), i);
-            } else {
-                loadNode(node, valuator.count(node, mmlType), i);
-            }
+            float rank = subformulae ? (1 / valuator.count(node, mmlType)) : valuator.count(node, mmlType);
+            loadNode(node, rank, i);
         }
     }
 
@@ -273,6 +270,32 @@ public class MathTokenizer extends Tokenizer {
                 }
                 if (store && !MathMLConf.ignoreNode(name)) {
                     formulae.get(position).add(new Formula(n, level));
+                    loadUnifiedNodes(n, level, position);
+                }
+            }
+        }
+    }
+
+    /**
+     * Called when loading formulae from the document one for every formula from
+     * the document. For the given node generates its structurally unified
+     * variants and adds them to the formulae map.
+     *
+     * @param n Node current MathML node.
+     * @param basicRank current depth in the original formula tree which is also
+     * rank of the this Node
+     * @param position position of the original formula in the map of formulae
+     */
+    private void loadUnifiedNodes(Node n, float basicWeight, int position) {
+        if (n.getNodeType() == Node.ELEMENT_NODE) {
+            HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n);
+            int maxUniLevel = unifiedMathMLNodes.size();
+            for (int uniLevel : unifiedMathMLNodes.keySet()) {
+                Node un = unifiedMathMLNodes.get(uniLevel);
+                float nodeWeightCoef = ((float) (maxUniLevel - uniLevel) / maxUniLevel); // Equals 0 for node at max. level
+                if (nodeWeightCoef >= MathMLConf.unifiedNodeWeightCoefThreshold) {
+                    float weight = basicWeight * nodeWeightCoef;
+                    formulae.get(position).add(new Formula(un, weight));
                 }
             }
         }
