@@ -29,6 +29,7 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
 import cz.muni.fi.mir.mathmlunificator.MathMLUnificator;
+import cz.muni.fi.mir.mathmlunificator.utils.XMLOut;
 
 /**
  * Implementation of Lucene Tokenizer. Provides math formulae contained in the
@@ -737,8 +738,12 @@ public class MathTokenizer extends Tokenizer {
     private void printMap(Map<Integer, List<Formula>> formulae) {
         for (Map.Entry<Integer, List<Formula>> entry : formulae.entrySet()) {
             List<Formula> forms = entry.getValue();
+            int counter = 1;
             for (Formula f : forms) {
-                System.out.println(entry.getKey() + " " + nodeToString(f.getNode(), false) + " " + f.getWeight());
+                StringBuilder sb = new StringBuilder("### Formula no. " + counter++ + " ###\n");
+                sb.append(entry.getKey() + " " + nodeToString(f.getNode(), false) + " " + f.getWeight() + "\n");
+                sb.append(XMLOut.xmlStringSerializer(f.getNode()));
+                System.out.println(sb.toString());
             }
         }
     }
