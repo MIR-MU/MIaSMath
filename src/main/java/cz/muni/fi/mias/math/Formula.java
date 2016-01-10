@@ -164,7 +164,7 @@ public class Formula {
     }
 
     private static boolean isMrowOrMathOrMfenced(String name) {
-        return name.equals("mrow") || name.equals("math") || name.equals("mfenced");
+        return name != null && (name.equals("mrow") || name.equals("math") || name.equals("mfenced"));
     }
 
 }
