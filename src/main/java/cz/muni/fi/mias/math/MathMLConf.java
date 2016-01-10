@@ -52,7 +52,7 @@ public class MathMLConf {
      * with weight coefficient under this threshold will be discarded from
      * further processing.
      */
-    public static final float unifiedNodeWeightCoefThreshold = 0.1f;
+    public static final float unifiedNodeWeightCoefThreshold = 0.01f;
 
     public static List<String> getPresentationElements() {
         return presentationElements;
