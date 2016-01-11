@@ -59,6 +59,7 @@ public class MathTokenizer extends Tokenizer {
     // configuration
     private float lCoef = 0.7f;
     private float vCoef = 0.8f;
+    private float vCoefGen = 0.8f * vCoef;
     private float cCoef = 0.5f;
     private float oCoef = 0.8f;
     private final float aCoef = 1.2f;
@@ -530,7 +531,8 @@ public class MathTokenizer extends Tokenizer {
      * the rank of modified formula.
      */
     private void modify() {
-        unifyVariables(vCoef);
+        unifyVariables(vCoef, true);
+        unifyVariables(vCoefGen, false);
         unifyConst(cCoef);
         unifyOperators(oCoef);
         processAttributes(aCoef);
@@ -541,8 +543,14 @@ public class MathTokenizer extends Tokenizer {
      *
      * @param rank Specifies the factor by which it should alter the rank of
      * modified formula
+     * @param keepAlphaEquivalence If <code>true</code> variable unification will
+     * preserve alfa equivalence, i.e. identical variables will be preserved
+     * with one symbol distinct from substituing symbols used for different
+     * variable. If <code>false</code>, variable will be unified with general
+     * unification symbol (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      */
-    private void unifyVariables(float rank) {
+    private void unifyVariables(float rank, boolean keepAlphaEquivalence) {
         List<Formula> result = new ArrayList<Formula>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
@@ -556,7 +564,7 @@ public class MathTokenizer extends Tokenizer {
                 if (hasElement) {
                     Map<String, String> changes = new HashMap<String, String>();
                     Node newNode = node.cloneNode(true);
-                    boolean changed = unifyVariablesNode(newNode, changes);
+                    boolean changed = unifyVariablesNode(newNode, changes, keepAlphaEquivalence);
                     if (changed) {
                         result.add(new Formula(newNode, f.getWeight() * rank));
                     }
@@ -575,19 +583,29 @@ public class MathTokenizer extends Tokenizer {
      * @param changes Map holding the performed changes, so that the variables
      * with the same name are always substituted with the same unified name
      * within the scope of each formula.
+     * @param keepAlphaEquivalence If <code>true</code> variable unification will
+     * preserve alfa equivalence, i.e. identical variables will be preserved
+     * with one symbol distinct from substituing symbols used for different
+     * variable using <code>changes</code> map. If <code>false</code>, variable
+     * will be unified with general unification symbol (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      * @return Saying whether or not this formula was modified
      */
-    private boolean unifyVariablesNode(Node node, Map<String, String> changes) {
+    private boolean unifyVariablesNode(Node node, Map<String, String> changes, boolean keepAlphaEquivalence) {
         boolean result = false;
         if (node instanceof Element) {
             NodeList nl = node.getChildNodes();
             for (int j = 0; j < nl.getLength(); j++) {
-                result = unifyVariablesNode(nl.item(j), changes) == false ? result : true;
+                result = unifyVariablesNode(nl.item(j), changes, keepAlphaEquivalence) == false ? result : true;
             }
             if (MathMLConstants.PMML_MI.equals(node.getLocalName()) || MathMLConstants.CMML_CI.equals(node.getLocalName())) {
-                String oldVar = node.getTextContent();
-                String newVar = toVar(oldVar, changes);
-                node.setTextContent(newVar);
+                if (keepAlphaEquivalence) {
+                    String oldVar = node.getTextContent();
+                    String newVar = toVar(oldVar, changes);
+                    node.setTextContent(newVar);
+                } else {
+                    MathMLUnificator.replaceNodeWithUnificator(node);
+                }
                 return true;
             }
         }
