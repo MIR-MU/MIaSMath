@@ -59,11 +59,11 @@ public class MathTokenizer extends Tokenizer {
     // configuration
     private float lCoef = 0.7f;
     private float vCoef = 0.8f;
-    private float vCoefGen = 0.8f * vCoef;
+    private float vCoefGen = 0.8f;
     private float cCoef = 0.5f;
-    private float cCoefGen = 0.95f * cCoef;
+    private float cCoefGen = 0.95f;
     private float oCoef = 0.8f;
-    private float oCoefGen = 0.5f * oCoef;
+    private float oCoefGen = 0.5f;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
     private final MathMLType mmlType;
@@ -79,6 +79,8 @@ public class MathTokenizer extends Tokenizer {
     private Iterator<List<Formula>> itMap = Collections.<List<Formula>>emptyList().iterator();
     private Iterator<Formula> itForms = Collections.<Formula>emptyList().iterator();
     private int increment;
+
+    private static final boolean[] trueFalseCollection = {true, false};
 
     public enum MathMLType {
 
@@ -533,12 +535,9 @@ public class MathTokenizer extends Tokenizer {
      * the rank of modified formula.
      */
     private void modify() {
-        unifyVariables(vCoef, true);
-        unifyVariables(vCoefGen, false);
-        unifyConst(cCoef, true);
-        unifyConst(cCoefGen, false);
-        unifyOperators(oCoef, true);
-        unifyOperators(oCoefGen, false);
+        unifyVariables(vCoef);
+        unifyConst(cCoef);
+        unifyOperators(oCoef);
         processAttributes(aCoef);
     }
 
@@ -547,14 +546,8 @@ public class MathTokenizer extends Tokenizer {
      *
      * @param rank Specifies the factor by which it should alter the rank of
      * modified formula
-     * @param keepAlphaEquivalence If <code>true</code> variable unification will
-     * preserve alfa equivalence, i.e. identical variables will be preserved
-     * with one symbol distinct from substituing symbols used for different
-     * variable. If <code>false</code>, variable will be unified with general
-     * unification symbol (see
-     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      */
-    private void unifyVariables(float rank, boolean keepAlphaEquivalence) {
+    private void unifyVariables(float rank) {
         List<Formula> result = new ArrayList<Formula>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
@@ -566,11 +559,13 @@ public class MathTokenizer extends Tokenizer {
                     hasElement = false;
                 }
                 if (hasElement) {
-                    Map<String, String> changes = new HashMap<String, String>();
-                    Node newNode = node.cloneNode(true);
-                    boolean changed = unifyVariablesNode(newNode, changes, keepAlphaEquivalence);
-                    if (changed) {
-                        result.add(new Formula(newNode, f.getWeight() * rank));
+                    for (boolean keepAlphaEquivalence : trueFalseCollection) {
+                        Map<String, String> changes = new HashMap<String, String>();
+                        Node newNode = node.cloneNode(true);
+                        boolean changed = unifyVariablesNode(newNode, changes, keepAlphaEquivalence);
+                        if (changed) {
+                            result.add(new Formula(newNode, f.getWeight() * (keepAlphaEquivalence ? rank : vCoefGen * rank)));
+                        }
                     }
                 }
             }
@@ -587,11 +582,11 @@ public class MathTokenizer extends Tokenizer {
      * @param changes Map holding the performed changes, so that the variables
      * with the same name are always substituted with the same unified name
      * within the scope of each formula.
-     * @param keepAlphaEquivalence If <code>true</code> variable unification will
-     * preserve alfa equivalence, i.e. identical variables will be preserved
-     * with one symbol distinct from substituing symbols used for different
-     * variable using <code>changes</code> map. If <code>false</code>, variable
-     * will be unified with general unification symbol (see
+     * @param keepAlphaEquivalence If <code>true</code> variable unification
+     * will preserve alfa equivalence, i.e. identical variables will be
+     * preserved with one symbol distinct from substituing symbols used for
+     * different variable using <code>changes</code> map. If <code>false</code>,
+     * variable will be unified with general unification symbol (see
      * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      * @return Saying whether or not this formula was modified
      */
@@ -638,13 +633,8 @@ public class MathTokenizer extends Tokenizer {
      * them for "const" string.
      *
      * @param rank Specifies how the method should alter modified formulae
-     * @param keepAsNumberElement If <code>true</code> the constant will be
-     * substituted for const string, but the element name (number) will be kept.
-     * If <code>false</code>, the constant node will be unified with general
-     * unification symbol (see
-     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      */
-    private void unifyConst(float rank, boolean keepAsNumberElement) {
+    private void unifyConst(float rank) {
         List<Formula> result = new ArrayList<Formula>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
@@ -656,10 +646,12 @@ public class MathTokenizer extends Tokenizer {
                     hasElement = false;
                 }
                 if (hasElement) {
-                    Node newNode = node.cloneNode(true);
-                    boolean changed = unifyConstNode(newNode, keepAsNumberElement);
-                    if (changed) {
-                        result.add(new Formula(newNode, f.getWeight() * rank));
+                    for (boolean keepAsNumberElement : trueFalseCollection) {
+                        Node newNode = node.cloneNode(true);
+                        boolean changed = unifyConstNode(newNode, keepAsNumberElement);
+                        if (changed) {
+                            result.add(new Formula(newNode, f.getWeight() * (keepAsNumberElement ? rank : cCoefGen * rank)));
+                        }
                     }
                 }
             }
@@ -707,14 +699,9 @@ public class MathTokenizer extends Tokenizer {
      *
      * @param rank Specifies how the method should alter modified formulae
      * weight
-     * @param similarUnification If <code>true</code> the operators will be
-     * substituted by groups for general string representign this group, if
-     * <code>false</code>, the operator node will be unified with general
-     * unification symbol (see
-     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      * @return Saying whether or not this formula was modified
      */
-    private void unifyOperators(float rank, boolean similarUnification) {
+    private void unifyOperators(float rank) {
         List<Formula> result = new ArrayList<Formula>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
@@ -726,10 +713,12 @@ public class MathTokenizer extends Tokenizer {
                     hasElement = false;
                 }
                 if (hasElement) {
-                    Node newNode = node.cloneNode(true);
-                    boolean changed = unifyOperatorsNode(newNode, similarUnification);
-                    if (changed) {
-                        result.add(new Formula(newNode, f.getWeight() * rank));
+                    for (boolean similarUnification : trueFalseCollection) {
+                        Node newNode = node.cloneNode(true);
+                        boolean changed = unifyOperatorsNode(newNode, similarUnification);
+                        if (changed) {
+                            result.add(new Formula(newNode, f.getWeight() * (similarUnification ? rank : oCoefGen * rank)));
+                        }
                     }
                 }
             }
