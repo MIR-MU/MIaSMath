@@ -61,6 +61,7 @@ public class MathTokenizer extends Tokenizer {
     private float vCoef = 0.8f;
     private float vCoefGen = 0.8f * vCoef;
     private float cCoef = 0.5f;
+    private float cCoefGen = 0.95f * cCoef;
     private float oCoef = 0.8f;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
@@ -533,7 +534,8 @@ public class MathTokenizer extends Tokenizer {
     private void modify() {
         unifyVariables(vCoef, true);
         unifyVariables(vCoefGen, false);
-        unifyConst(cCoef);
+        unifyConst(cCoef, true);
+        unifyConst(cCoefGen, false);
         unifyOperators(oCoef);
         processAttributes(aCoef);
     }
@@ -634,8 +636,13 @@ public class MathTokenizer extends Tokenizer {
      * them for "const" string.
      *
      * @param rank Specifies how the method should alter modified formulae
+     * @param keepAsNumberElement If <code>true</code> the constant will be
+     * substituted for const string, but the element name (number) will be kept.
+     * If <code>false</code>, the constant node will be unified with general
+     * unification symbol (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      */
-    private void unifyConst(float rank) {
+    private void unifyConst(float rank, boolean keepAsNumberElement) {
         List<Formula> result = new ArrayList<Formula>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
@@ -648,7 +655,7 @@ public class MathTokenizer extends Tokenizer {
                 }
                 if (hasElement) {
                     Node newNode = node.cloneNode(true);
-                    boolean changed = unifyConstNode(newNode);
+                    boolean changed = unifyConstNode(newNode, keepAsNumberElement);
                     if (changed) {
                         result.add(new Formula(newNode, f.getWeight() * rank));
                     }
@@ -664,17 +671,26 @@ public class MathTokenizer extends Tokenizer {
      *
      * @param node Node representing current formula or subformula that is being
      * modified
+     * @param keepAsNumberElement If <code>true</code> the constant will be
+     * substituted for const string, but the element name (number) will be kept.
+     * If <code>false</code>, the constant node will be unified with general
+     * unification symbol (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      * @return Saying whether or not this formula was modified
      */
-    private boolean unifyConstNode(Node node) {
+    private boolean unifyConstNode(Node node, boolean keepAsNumberElement) {
         boolean result = false;
         if (node instanceof Element) {
             NodeList nl = node.getChildNodes();
             for (int j = 0; j < nl.getLength(); j++) {
-                result = unifyConstNode(nl.item(j)) == false ? result : true;
+                result = unifyConstNode(nl.item(j), keepAsNumberElement) == false ? result : true;
             }
             if (MathMLConstants.PMML_MN.equals(node.getLocalName()) || MathMLConstants.CMML_CN.equals(node.getLocalName())) {
-                node.setTextContent("\u00B6");
+                if (keepAsNumberElement) {
+                    node.setTextContent("\u00B6");
+                } else {
+                    MathMLUnificator.replaceNodeWithUnificator(node);
+                }
                 return true;
             }
         }
