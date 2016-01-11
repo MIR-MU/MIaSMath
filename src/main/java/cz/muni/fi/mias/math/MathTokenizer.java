@@ -63,6 +63,7 @@ public class MathTokenizer extends Tokenizer {
     private float cCoef = 0.5f;
     private float cCoefGen = 0.95f * cCoef;
     private float oCoef = 0.8f;
+    private float oCoefGen = 0.5f * oCoef;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
     private final MathMLType mmlType;
@@ -536,7 +537,8 @@ public class MathTokenizer extends Tokenizer {
         unifyVariables(vCoefGen, false);
         unifyConst(cCoef, true);
         unifyConst(cCoefGen, false);
-        unifyOperators(oCoef);
+        unifyOperators(oCoef, true);
+        unifyOperators(oCoefGen, false);
         processAttributes(aCoef);
     }
 
@@ -699,12 +701,20 @@ public class MathTokenizer extends Tokenizer {
 
     /**
      * Performing unifying of all operators in the formula by substituting them
-     * for "+" string.
+     * for some general string unifiny all "similar" oprators (i.e. substitute
+     * "+", "-", "±" etc. for "+") or general unificator (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      *
      * @param rank Specifies how the method should alter modified formulae
      * weight
+     * @param similarUnification If <code>true</code> the operators will be
+     * substituted by groups for general string representign this group, if
+     * <code>false</code>, the operator node will be unified with general
+     * unification symbol (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
+     * @return Saying whether or not this formula was modified
      */
-    private void unifyOperators(float rank) {
+    private void unifyOperators(float rank, boolean similarUnification) {
         List<Formula> result = new ArrayList<Formula>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
@@ -717,7 +727,7 @@ public class MathTokenizer extends Tokenizer {
                 }
                 if (hasElement) {
                     Node newNode = node.cloneNode(true);
-                    boolean changed = unifyOperatorsNode(newNode);
+                    boolean changed = unifyOperatorsNode(newNode, similarUnification);
                     if (changed) {
                         result.add(new Formula(newNode, f.getWeight() * rank));
                     }
@@ -729,27 +739,45 @@ public class MathTokenizer extends Tokenizer {
 
     /**
      * Recursively modifying operators of the formula or subformula specified by
-     * given Node
+     * given Node. The operator will be substituted for some general string
+     * unifiny all "similar" oprators (i.e. substitute "+", "-", "±" etc. for
+     * "+") or general unificator (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      *
      * @param node Node representing current formula or subformula that is being
      * modified
+     * @param similarUnification If <code>true</code> the operators will be
+     * substituted by groups for general string representign this group, if
+     * <code>false</code>, the operator node will be unified with general
+     * unification symbol (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      * @return Saying whether or not this formula was modified
      */
-    private boolean unifyOperatorsNode(Node node) {
+    private boolean unifyOperatorsNode(Node node, boolean similarUnification) {
         boolean result = false;
         if (node instanceof Element) {
             NodeList nl = node.getChildNodes();
             for (int j = 0; j < nl.getLength(); j++) {
-                result = unifyOperatorsNode(nl.item(j)) == false ? result : true;
+                result = unifyOperatorsNode(nl.item(j), similarUnification) == false ? result : true;
             }
-            if (node.getLocalName().equals(MathMLConstants.PMML_MO)
-                    && MathMLConf.additiveOperators.contains(node.getTextContent())) {
-                node.setTextContent("+");
-                return true;
-            } else if (MathMLConf.additiveOperators.contains(node.getLocalName())) {
-                Node unifiedCmmlOperator = node.getOwnerDocument().createElement("op");
-                node.getParentNode().replaceChild(unifiedCmmlOperator, node);
-                return true;
+            if (similarUnification) {
+                if (node.getLocalName() != null
+                        && node.getLocalName().equals(MathMLConstants.PMML_MO)
+                        && MathMLConf.additiveOperators.contains(node.getTextContent())) {
+                    node.setTextContent("+");
+                    return true;
+                } else if (node.getLocalName() != null
+                        && MathMLConf.additiveOperators.contains(node.getLocalName())) {
+                    Node unifiedCmmlOperator = node.getOwnerDocument().createElement("op");
+                    node.getParentNode().replaceChild(unifiedCmmlOperator, node);
+                    return true;
+                }
+            } else {
+                if (node.getLocalName() != null
+                        && node.getLocalName().equals(MathMLConstants.PMML_MO)) {
+                    MathMLUnificator.replaceNodeWithUnificator(node);
+                    return true;
+                }
             }
         }
         return result;
