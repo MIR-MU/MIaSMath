@@ -29,6 +29,7 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
 import cz.muni.fi.mir.mathmlunificator.MathMLUnificator;
+import cz.muni.fi.mir.mathmlunificator.config.Constants;
 import cz.muni.fi.mir.mathmlunificator.utils.XMLOut;
 
 /**
