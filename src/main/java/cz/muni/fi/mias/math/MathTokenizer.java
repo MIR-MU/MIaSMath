@@ -596,14 +596,19 @@ public class MathTokenizer extends Tokenizer {
                 result = unifyVariablesNode(nl.item(j), changes, keepAlphaEquivalence) == false ? result : true;
             }
             if (MathMLConstants.PMML_MI.equals(node.getLocalName()) || MathMLConstants.CMML_CI.equals(node.getLocalName())) {
-                if (keepAlphaEquivalence) {
-                    String oldVar = node.getTextContent();
-                    String newVar = toVar(oldVar, changes);
-                    node.setTextContent(newVar);
-                } else {
-                    MathMLUnificator.replaceNodeWithUnificator(node);
+                String oldVar = node.getTextContent();
+                if (oldVar != null && !oldVar.equals(Constants.UNIFICATOR)) {
+                    if (keepAlphaEquivalence) {
+                        String newVar = toVar(oldVar, changes);
+                        node.setTextContent(newVar);
+                        result = true;
+                    } else {
+                        MathMLUnificator.replaceNodeWithUnificator(node);
+                        result = true;
+
+                    }
                 }
-                return true;
+
             }
         }
         return result;
