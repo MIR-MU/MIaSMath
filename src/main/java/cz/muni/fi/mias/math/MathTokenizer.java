@@ -292,7 +292,7 @@ public class MathTokenizer extends Tokenizer {
      */
     private void loadUnifiedNodes(Node n, float basicWeight, int position) {
         if (n.getNodeType() == Node.ELEMENT_NODE) {
-            HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n);
+            HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n, false);
             int maxUniLevel = unifiedMathMLNodes.size() + 1; // Add 1 for the original formula that is not part of the set of unified formulae
             for (int uniLevel : unifiedMathMLNodes.keySet()) {
                 Node un = unifiedMathMLNodes.get(uniLevel);
