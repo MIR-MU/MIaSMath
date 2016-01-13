@@ -54,6 +54,13 @@ public class MathMLConf {
      */
     public static final float unifiedNodeWeightCoefThreshold = 0.01f;
 
+    /**
+     * Threshold of input node complexity (i.e. the number of subnodes of the
+     * node tree) to process the node with MathML Unificator. Nodes with
+     * complexity above this limit will not be processed.
+     */
+    public static final int inputNodeComplexityUnificationLimit = 2000;
+
     public static List<String> getPresentationElements() {
         return presentationElements;
     }

@@ -306,17 +306,23 @@ public class MathTokenizer extends Tokenizer {
      * @param position position of the original formula in the map of formulae
      */
     private void loadUnifiedNodes(Node n, float basicWeight, int position) {
-        if (n.getNodeType() == Node.ELEMENT_NODE) {
-            HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n, false);
-            int maxUniLevel = unifiedMathMLNodes.size() + 1; // Add 1 for the original formula that is not part of the set of unified formulae
-            for (int uniLevel : unifiedMathMLNodes.keySet()) {
-                Node un = unifiedMathMLNodes.get(uniLevel);
-                float nodeWeightCoef = ((float) (maxUniLevel - uniLevel) / maxUniLevel);
-                if (nodeWeightCoef >= MathMLConf.unifiedNodeWeightCoefThreshold) {
-                    float weight = basicWeight * nodeWeightCoef;
-                    formulae.get(position).add(new Formula(un, weight));
+        int nodeComplexity = (int) valuator.count(n, mmlType);
+        LOG.finer("Loading node of input complexity " + nodeComplexity + " for unification.");
+        if (nodeComplexity <= MathMLConf.inputNodeComplexityUnificationLimit) {
+            if (n.getNodeType() == Node.ELEMENT_NODE) {
+                HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n, false);
+                int maxUniLevel = unifiedMathMLNodes.size() + 1; // Add 1 for the original formula that is not part of the set of unified formulae
+                for (int uniLevel : unifiedMathMLNodes.keySet()) {
+                    Node un = unifiedMathMLNodes.get(uniLevel);
+                    float nodeWeightCoef = 0.5f * ((float) (maxUniLevel - uniLevel) / maxUniLevel);
+                    if (nodeWeightCoef >= MathMLConf.unifiedNodeWeightCoefThreshold) {
+                        float weight = basicWeight * nodeWeightCoef;
+                        formulae.get(position).add(new Formula(un, weight));
+                    }
                 }
             }
+        } else {
+            LOG.info("Not unifying node of input complexity " + nodeComplexity + " exceeding set limit " + MathMLConf.inputNodeComplexityUnificationLimit + ".");
         }
     }
 
