@@ -19,7 +19,9 @@ import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.util.ByteBlockPool;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefHash;
 import org.jdom2.output.DOMOutputter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -43,6 +45,11 @@ import cz.muni.fi.mir.mathmlunificator.utils.XMLOut;
 public class MathTokenizer extends Tokenizer {
 
     private static final Logger LOG = Logger.getLogger(MathTokenizer.class.getName());
+
+    /**
+     * Maximal Lucene field length in bytes according to {@link BytesRefHash}.
+     */
+    public static final int MAX_LUCENE_TEXT_FIELD_LENGTH = ByteBlockPool.BYTE_BLOCK_SIZE - 2;
 
     private static FormulaValuator valuator = new CountNodesFormulaValuator();
     private static Map<String, List<String>> ops = MathMLConf.getOperators();
@@ -123,7 +130,14 @@ public class MathTokenizer extends Tokenizer {
         if (nextIt()) {
             Formula f = itForms.next();
             termAtt.setEmpty();
-            termAtt.append(nodeToString(f.getNode(), false));
+            String nodeString = nodeToString(f.getNode(), false);
+            if (nodeString.getBytes().length <= MAX_LUCENE_TEXT_FIELD_LENGTH) {
+                termAtt.append(nodeString);
+            } else {
+                // Discard this entire node contents to prevent Lucene indexing failures
+                LOG.warning("Node string representation too long (" + nodeString.getBytes().length + " bytes), node contents discarded.");
+                termAtt.append("");
+            }
             byte[] payload = PayloadHelper.encodeFloatToShort(f.getWeight());
             payAtt.setPayload(new BytesRef(payload));
             posAtt.setPositionIncrement(increment);
