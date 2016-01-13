@@ -33,6 +33,7 @@ import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
 import cz.muni.fi.mir.mathmlunificator.MathMLUnificator;
 import cz.muni.fi.mir.mathmlunificator.config.Constants;
 import cz.muni.fi.mir.mathmlunificator.utils.XMLOut;
+import java.util.Arrays;
 
 /**
  * Implementation of Lucene Tokenizer. Provides math formulae contained in the
@@ -240,6 +241,55 @@ public class MathTokenizer extends Tokenizer {
         return doc;
     }
 
+    private boolean isTrivial(Formula formula) {
+
+        Node node = formula.getNode();
+
+        // Empty formula, root element only
+        if (node.getChildNodes().getLength() == 0) {
+            return true;
+        }
+        // Single variable/number/operator
+        if (node.getChildNodes().getLength() == 1
+                && node.getChildNodes().item(0).getNodeType() == Node.TEXT_NODE
+                && node.getLocalName() != null
+                && Arrays.asList(
+                        MathMLConstants.PMML_MI,
+                        MathMLConstants.PMML_MO,
+                        MathMLConstants.PMML_MN,
+                        MathMLConstants.CMML_CI,
+                        MathMLConstants.CMML_CN,
+                        MathMLConstants.CMML_CSYMBOL,
+                        MathMLConstants.CMML_PLUS,
+                        MathMLConstants.CMML_TIMES
+                ).contains(node.getLocalName())) {
+            return true;
+        }
+
+        return false;
+
+    }
+
+    private boolean addNontrivialFormula(int position, Formula formula) {
+        if (!isTrivial(formula)) {
+            formulae.get(position).add(formula);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private List<Formula> addAllNontrivialFormula(List<Formula> collectionToAddTo, List<Formula> formulaeToAdd) {
+        List<Formula> nontrivialFormulae = new ArrayList<>();
+        for (Formula f : formulaeToAdd) {
+            if (!isTrivial(f)) {
+                nontrivialFormulae.add(f);
+            }
+        }
+        collectionToAddTo.addAll(nontrivialFormulae);
+        return nontrivialFormulae;
+    }
+
     /**
      * Loads all the formulae located in given w3c.dom.Document.
      *
@@ -288,7 +338,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
                 if (store && !MathMLConf.ignoreNode(name)) {
-                    formulae.get(position).add(new Formula(n, level));
+                    addNontrivialFormula(position, new Formula(n, level));
                     loadUnifiedNodes(n, level, position);
                 }
             }
@@ -317,7 +367,7 @@ public class MathTokenizer extends Tokenizer {
                     float nodeWeightCoef = 0.5f * ((float) (maxUniLevel - uniLevel) / maxUniLevel);
                     if (nodeWeightCoef >= MathMLConf.unifiedNodeWeightCoefThreshold) {
                         float weight = basicWeight * nodeWeightCoef;
-                        formulae.get(position).add(new Formula(un, weight));
+                        addNontrivialFormula(position, new Formula(un, weight));
                     }
                 }
             }
@@ -586,7 +636,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
             }
-            forms.addAll(result);
+            addAllNontrivialFormula(forms, result);
         }
     }
 
@@ -624,7 +674,6 @@ public class MathTokenizer extends Tokenizer {
                     } else {
                         MathMLUnificator.replaceNodeWithUnificator(node);
                         result = true;
-
                     }
                 }
 
@@ -675,7 +724,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
             }
-            forms.addAll(result);
+            addAllNontrivialFormula(forms, result);
         }
     }
 
@@ -730,7 +779,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
             }
-            forms.addAll(result);
+            addAllNontrivialFormula(forms, result);
         }
     }
 

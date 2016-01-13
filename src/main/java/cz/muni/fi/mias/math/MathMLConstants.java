@@ -13,6 +13,7 @@ public class MathMLConstants {
 
     public static final String CMML_CI = "ci";
     public static final String CMML_CN = "cn";
+    public static final String CMML_CSYMBOL = "csymbol";
     public static final String CMML_TIMES = "times";
     public static final String CMML_PLUS = "plus";
 
