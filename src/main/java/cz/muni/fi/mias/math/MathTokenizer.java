@@ -672,8 +672,12 @@ public class MathTokenizer extends Tokenizer {
                         node.setTextContent(newVar);
                         result = true;
                     } else {
-                        MathMLUnificator.replaceNodeWithUnificator(node);
-                        result = true;
+                        try {
+                            MathMLUnificator.replaceNodeWithUnificator(node);
+                            result = true;
+                        } catch (Exception ex) {
+                            LOG.log(Level.WARNING, "Replacing node with unificator failed: " + ex.getMessage(), ex);
+                        }
                     }
                 }
 
