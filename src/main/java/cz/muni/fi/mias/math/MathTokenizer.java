@@ -33,6 +33,7 @@ import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
 import cz.muni.fi.mir.mathmlunificator.MathMLUnificator;
 import cz.muni.fi.mir.mathmlunificator.config.Constants;
 import cz.muni.fi.mir.mathmlunificator.utils.XMLOut;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -133,13 +134,23 @@ public class MathTokenizer extends Tokenizer {
             Formula f = itForms.next();
             termAtt.setEmpty();
             String nodeString = nodeToString(f.getNode(), false);
-            if (nodeString.getBytes().length <= MAX_LUCENE_TEXT_FIELD_LENGTH) {
-                termAtt.append(nodeString);
-            } else {
-                // Discard this entire node contents to prevent Lucene indexing failures
-                LOG.warning("Node string representation too long (" + nodeString.getBytes().length + " bytes), node contents discarded.");
-                termAtt.append("");
+            // Trim node string representation to fit Lucene index term max size
+            if (nodeString.getBytes().length > MAX_LUCENE_TEXT_FIELD_LENGTH) {
+                int oldLength = nodeString.getBytes().length;
+                // The max length is specified in bytes. However, the string potentially contains multi-byte characters.
+                // Thus, we have to cut off at boundary of characters but not exceeding the length in bytes.
+                // At http://www.jroller.com/holy/entry/truncating_utf_string_to_the the exploitation of String constructor
+                // behaviour on invalid UTF-8 sequences is suggested:
+                //   ’The new String constructor will automatically replace any invalid character (i.e. incomplete
+                //   utf-8 char; we may only have one at the end) with the character \uFFFD, which looks like an
+                //   empty rectangle. This character requires 3 bytes in utf-8 - therefore we decrease
+                //   DB_FIELD_LENGTH by 2; the resulting string will have either exactly maxLen bytes if its
+                //   last byte(s) is a valid utf-8 character or maxLen+2 bytes if it isn't valid and this 1 byte
+                //   was replaced by \uFFFD (3B)’
+                nodeString = new String(nodeString.getBytes(StandardCharsets.UTF_8), 0, MAX_LUCENE_TEXT_FIELD_LENGTH - 2, StandardCharsets.UTF_8);
+                LOG.warning("Node string representation too long (" + oldLength + " bytes), cut to " + nodeString.getBytes().length + " bytes.");
             }
+            termAtt.append(nodeString);
             byte[] payload = PayloadHelper.encodeFloatToShort(f.getWeight());
             payAtt.setPayload(new BytesRef(payload));
             posAtt.setPositionIncrement(increment);
