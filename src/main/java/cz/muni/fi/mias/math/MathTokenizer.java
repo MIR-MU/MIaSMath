@@ -49,6 +49,7 @@ public class MathTokenizer extends Tokenizer {
      * Maximal filed length according to {@link BytesRefHash}
      */
     public static final int MAX_LUCENE_TEXT_FIELD_LENGTH = ByteBlockPool.BYTE_BLOCK_SIZE - 2;
+    public static final int TOKEN_TRIM_LENGTH = 20000;
     
     private static FormulaValuator valuator      = new CountNodesFormulaValuator();
     private static Map<String, List<String>> ops = MathMLConf.getOperators();
@@ -123,13 +124,12 @@ public class MathTokenizer extends Tokenizer {
             Formula f = itForms.next();
             termAtt.setEmpty();
             String nodeString = nodeToString(f.getNode(), false);
-            if (nodeString.getBytes().length <= MAX_LUCENE_TEXT_FIELD_LENGTH) {
-                termAtt.append(nodeString);
-            } else {
-                // Discard this entire node contents to prevent Lucene indexing failures
-                LOG.warning("Node string representation too long (" + nodeString.getBytes().length + " bytes), node contents discarded.");
-                termAtt.append("");
+            if (nodeString.length() >= MAX_LUCENE_TEXT_FIELD_LENGTH) {
+                // Trim node string representation to fit Lucene index term max size
+                LOG.warning("Node string representation too long (" + nodeString.length() + ").");
+                nodeString.substring(0, TOKEN_TRIM_LENGTH);
             }
+            termAtt.append(nodeString);
             byte[] payload = PayloadHelper.encodeFloatToShort(f.getWeight());
             payAtt.setPayload(new BytesRef(payload));
             posAtt.setPositionIncrement(increment);
