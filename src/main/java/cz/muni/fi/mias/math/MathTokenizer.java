@@ -45,10 +45,6 @@ public class MathTokenizer extends Tokenizer {
 
     private static final Logger LOG = Logger.getLogger(MathTokenizer.class.getName());
 
-    /**
-     * Maximal filed length according to {@link BytesRefHash}
-     */
-    public static final int MAX_LUCENE_TEXT_FIELD_LENGTH = ByteBlockPool.BYTE_BLOCK_SIZE - 2;
     public static final int TOKEN_TRIM_LENGTH = 20000;
     
     private static FormulaValuator valuator      = new CountNodesFormulaValuator();
@@ -124,7 +120,7 @@ public class MathTokenizer extends Tokenizer {
             Formula f = itForms.next();
             termAtt.setEmpty();
             String nodeString = nodeToString(f.getNode(), false);
-            if (nodeString.length() >= MAX_LUCENE_TEXT_FIELD_LENGTH) {
+            if (nodeString.length() >= TOKEN_TRIM_LENGTH) {
                 // Trim node string representation to fit Lucene index term max size
                 LOG.warning("Node string representation too long (" + nodeString.length() + ").");
                 nodeString.substring(0, TOKEN_TRIM_LENGTH);
