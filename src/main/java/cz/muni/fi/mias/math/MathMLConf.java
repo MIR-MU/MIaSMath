@@ -48,6 +48,13 @@ public class MathMLConf {
     public static final String MATHML_NAMESPACE_URI = "http://www.w3.org/1998/Math/MathML";
 
     /**
+     * General modificator of weight coefficients of unified nodes.
+     *
+     * @see UnifiedFormulaValuator
+     */
+    public static final float unifiedNodeWeightCoefModifier = 0.2f;
+
+    /**
      * Threshold for adding unified version of a formula to the index. Formulae
      * with weight coefficient under this threshold will be discarded from
      * further processing.

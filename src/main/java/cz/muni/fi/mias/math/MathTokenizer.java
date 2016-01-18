@@ -53,6 +53,7 @@ public class MathTokenizer extends Tokenizer {
     public static final int MAX_LUCENE_TEXT_FIELD_LENGTH = ByteBlockPool.BYTE_BLOCK_SIZE - 2;
 
     private static FormulaValuator valuator = new CountNodesFormulaValuator();
+    private static UnifiedFormulaValuator unifiedNodeValuator = new UnifiedFormulaValuator();
     private static Map<String, List<String>> ops = MathMLConf.getOperators();
     private static Map<String, String> eldict = MathMLConf.getElementDictionary();
     private static Map<String, String> attrdict = MathMLConf.getAttrDictionary();
@@ -361,11 +362,10 @@ public class MathTokenizer extends Tokenizer {
         if (nodeComplexity <= MathMLConf.inputNodeComplexityUnificationLimit) {
             if (n.getNodeType() == Node.ELEMENT_NODE) {
                 HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n, false);
-                int maxUniLevel = unifiedMathMLNodes.size() + 1; // Add 1 for the original formula that is not part of the set of unified formulae
                 for (int uniLevel : unifiedMathMLNodes.keySet()) {
                     Node un = unifiedMathMLNodes.get(uniLevel);
-                    float nodeWeightCoef = 0.5f * ((float) (maxUniLevel - uniLevel) / maxUniLevel);
                     if (nodeWeightCoef >= MathMLConf.unifiedNodeWeightCoefThreshold) {
+                    float nodeWeightCoef = unifiedNodeValuator.count(un, mmlType);
                         float weight = basicWeight * nodeWeightCoef;
                         addNontrivialFormula(position, new Formula(un, weight));
                     }
