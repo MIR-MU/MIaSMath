@@ -52,14 +52,7 @@ public class MathMLConf {
      *
      * @see UnifiedFormulaValuator
      */
-    public static final float unifiedNodeWeightCoefModifier = 0.2f;
-
-    /**
-     * Threshold for adding unified version of a formula to the index. Formulae
-     * with weight coefficient under this threshold will be discarded from
-     * further processing.
-     */
-    public static final float unifiedNodeWeightCoefThreshold = 0.01f;
+    public static final float unifiedNodeWeightCoefModifier = 0.1f;
 
     /**
      * Threshold of input node complexity (i.e. the number of subnodes of the

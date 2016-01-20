@@ -69,7 +69,7 @@ public class MathTokenizer extends Tokenizer {
     // configuration
     private float lCoef = 0.7f;
     private float vCoef = 0.8f;
-    private float vCoefGen = 0.8f;
+    private float vCoefGen = 0.03f;
     private float cCoef = 0.5f;
     private float oCoef = 0.8f;
     private final float aCoef = 1.2f;
@@ -364,11 +364,9 @@ public class MathTokenizer extends Tokenizer {
                 HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n, false);
                 for (int uniLevel : unifiedMathMLNodes.keySet()) {
                     Node un = unifiedMathMLNodes.get(uniLevel);
-                    if (nodeWeightCoef >= MathMLConf.unifiedNodeWeightCoefThreshold) {
                     float nodeWeightCoef = unifiedNodeValuator.count(un, mmlType);
-                        float weight = basicWeight * nodeWeightCoef;
-                        addNontrivialFormula(position, new Formula(un, weight));
-                    }
+                    float weight = basicWeight * nodeWeightCoef;
+                    addNontrivialFormula(position, new Formula(un, weight));
                 }
             }
         } else {
