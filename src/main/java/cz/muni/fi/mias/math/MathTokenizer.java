@@ -302,6 +302,9 @@ public class MathTokenizer extends Tokenizer {
             mathMLNamespace = "*";
         }
         NodeList list = doc.getElementsByTagNameNS(mathMLNamespace, MathMLConstants.MML_MATH);
+        if (list.getLength() == 0) {
+            list = doc.getElementsByTagNameNS("*", MathMLConstants.MML_MATH);
+        }
         inputF.addAndGet(list.getLength());
         for (int i = 0; i < list.getLength(); i++) {
             Node node = list.item(i);
