@@ -14,14 +14,14 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-
 import org.apache.commons.io.input.ReaderInputStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.util.ByteBlockPool;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefHash;
 import org.jdom2.output.DOMOutputter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -30,12 +30,15 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
-import org.apache.lucene.util.ByteBlockPool;
-import org.apache.lucene.util.BytesRefHash;
+import cz.muni.fi.mir.mathmlunificator.MathMLUnificator;
+import cz.muni.fi.mir.mathmlunificator.config.Constants;
+import cz.muni.fi.mir.mathmlunificator.utils.XMLOut;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
- * Implementation of Lucene Tokenizer. Provides math formulae contained in the input as
- * string tokens and their weight. These attributes are held in
+ * Implementation of Lucene Tokenizer. Provides math formulae contained in the
+ * input as string tokens and their weight. These attributes are held in
  * TermAttribute and PayloadAttribute and carried over the stream.
  *
  * @author Martin Liska
@@ -46,47 +49,54 @@ public class MathTokenizer extends Tokenizer {
     private static final Logger LOG = Logger.getLogger(MathTokenizer.class.getName());
 
     /**
-     * Maximal filed length according to {@link BytesRefHash}
+     * Maximal Lucene field length in bytes according to {@link BytesRefHash}.
      */
     public static final int MAX_LUCENE_TEXT_FIELD_LENGTH = ByteBlockPool.BYTE_BLOCK_SIZE - 2;
-    
-    private static FormulaValuator valuator      = new CountNodesFormulaValuator();
+
+    private static FormulaValuator valuator = new CountNodesFormulaValuator();
+    private static UnifiedFormulaValuator unifiedNodeValuator = new UnifiedFormulaValuator();
     private static Map<String, List<String>> ops = MathMLConf.getOperators();
-    private static Map<String, String> eldict    = MathMLConf.getElementDictionary();
-    private static Map<String, String> attrdict  = MathMLConf.getAttrDictionary();;
+    private static Map<String, String> eldict = MathMLConf.getElementDictionary();
+    private static Map<String, String> attrdict = MathMLConf.getAttrDictionary();
 
     // statistics
-    private static AtomicLong inputF    = new AtomicLong(0);
+    private static AtomicLong inputF = new AtomicLong(0);
     private static AtomicLong producedF = new AtomicLong(0);
 
     // utilities
     private final MathMLCanonicalizer canonicalizer = MathMLCanonicalizer.getDefaultCanonicalizer();
     private final DOMOutputter outputter = new DOMOutputter();
-    
+
     // configuration
     private float lCoef = 0.7f;
     private float vCoef = 0.8f;
+    private float vCoefGen = 0.03f;
     private float cCoef = 0.5f;
+    private float oCoef = 0.8f;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
     private final MathMLType mmlType;
     private int formulaPosition = 1;
-    
+
     // fields with state related to tokenization of current input;
     // fields must be correctly reset in order for this tokenizer to be re-usable
     // (see javadoc of org.apache.lucene.analysis.TokenStream.reset() method)
-    private final CharTermAttribute termAtt         = addAttribute(CharTermAttribute.class);
-    private final PayloadAttribute payAtt           = addAttribute(PayloadAttribute.class);
+    private final CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
+    private final PayloadAttribute payAtt = addAttribute(PayloadAttribute.class);
     private final PositionIncrementAttribute posAtt = addAttribute(PositionIncrementAttribute.class);
     private final Map<Integer, List<Formula>> formulae = new LinkedHashMap<Integer, List<Formula>>();
-    private Iterator<List<Formula>> itMap = Collections.<List<Formula>> emptyList().iterator();
-    private Iterator<Formula> itForms = Collections.<Formula> emptyList().iterator();
+    private Iterator<List<Formula>> itMap = Collections.<List<Formula>>emptyList().iterator();
+    private Iterator<Formula> itForms = Collections.<Formula>emptyList().iterator();
     private int increment;
-    
+
+    private static final boolean[] trueFalseCollection = {true, false};
+
     public enum MathMLType {
+
         CONTENT, PRESENTATION, BOTH
+
     }
-    
+
     /**
      * @param input Reader containing the input to process
      * @param subformulae if true, subformulae will be extracted
@@ -104,17 +114,18 @@ public class MathTokenizer extends Tokenizer {
             cCoef = 1;
         }
     }
-    
+
     /**
      * Overrides the position attribute for all processed formulae
-     * 
-     * @param formulaPosition Position number to be used for all processed formulae
+     *
+     * @param formulaPosition Position number to be used for all processed
+     * formulae
      */
     public void setFormulaPosition(int formulaPosition) {
         this.formulaPosition = formulaPosition;
         increment = formulaPosition;
     }
-    
+
     @Override
     // NB: TokenStream implementation classes or at least their incrementToken() implementation must be final
     public final boolean incrementToken() {
@@ -123,13 +134,23 @@ public class MathTokenizer extends Tokenizer {
             Formula f = itForms.next();
             termAtt.setEmpty();
             String nodeString = nodeToString(f.getNode(), false);
-            if (nodeString.getBytes().length <= MAX_LUCENE_TEXT_FIELD_LENGTH) {
-                termAtt.append(nodeString);
-            } else {
-                // Discard this entire node contents to prevent Lucene indexing failures
-                LOG.warning("Node string representation too long (" + nodeString.getBytes().length + " bytes), node contents discarded.");
-                termAtt.append("");
+            // Trim node string representation to fit Lucene index term max size
+            if (nodeString.getBytes().length > MAX_LUCENE_TEXT_FIELD_LENGTH) {
+                int oldLength = nodeString.getBytes().length;
+                // The max length is specified in bytes. However, the string potentially contains multi-byte characters.
+                // Thus, we have to cut off at boundary of characters but not exceeding the length in bytes.
+                // At http://www.jroller.com/holy/entry/truncating_utf_string_to_the the exploitation of String constructor
+                // behaviour on invalid UTF-8 sequences is suggested:
+                //   ’The new String constructor will automatically replace any invalid character (i.e. incomplete
+                //   utf-8 char; we may only have one at the end) with the character \uFFFD, which looks like an
+                //   empty rectangle. This character requires 3 bytes in utf-8 - therefore we decrease
+                //   DB_FIELD_LENGTH by 2; the resulting string will have either exactly maxLen bytes if its
+                //   last byte(s) is a valid utf-8 character or maxLen+2 bytes if it isn't valid and this 1 byte
+                //   was replaced by \uFFFD (3B)’
+                nodeString = new String(nodeString.getBytes(StandardCharsets.UTF_8), 0, MAX_LUCENE_TEXT_FIELD_LENGTH - 2, StandardCharsets.UTF_8);
+                LOG.warning("Node string representation too long (" + oldLength + " bytes), cut to " + nodeString.getBytes().length + " bytes.");
             }
+            termAtt.append(nodeString);
             byte[] payload = PayloadHelper.encodeFloatToShort(f.getWeight());
             payAtt.setPayload(new BytesRef(payload));
             posAtt.setPositionIncrement(increment);
@@ -140,17 +161,17 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
-     * Shifts iterator in the formulae map, helping incrementToken() to decide whether or not
-     * is there another token available.
-     * @return true if there is another formulae in the map,
-     *         false otherwise
+     * Shifts iterator in the formulae map, helping incrementToken() to decide
+     * whether or not is there another token available.
+     *
+     * @return true if there is another formulae in the map, false otherwise
      */
     private boolean nextIt() {
-        while (! itForms.hasNext() && itMap.hasNext()) {
+        while (!itForms.hasNext() && itMap.hasNext()) {
             itForms = itMap.next().iterator();
             increment++;
         }
-        
+
         return itForms.hasNext();
     }
 
@@ -164,32 +185,33 @@ public class MathTokenizer extends Tokenizer {
     @Override
     public void end() throws IOException {
         super.end();
-        
+
         clearFormulae();
     }
-    
+
     @Override
     public void close() throws IOException {
         super.close();
-        
+
         clearFormulae();
     }
 
     private void clearFormulae() {
         formulae.clear();
-        itMap = Collections.<List<Formula>> emptyList().iterator();;
-        itForms = Collections.<Formula> emptyList().iterator();;
+        itMap = Collections.<List<Formula>>emptyList().iterator();
+        itForms = Collections.<Formula>emptyList().iterator();
     }
-    
+
     /**
-     * Performs all the parsing, sorting, modifying and ranking of the formulae contained in the given
-     * InputStream.
-     * Internal representation of the formula is w3c.dom.Node.
+     * Performs all the parsing, sorting, modifying and ranking of the formulae
+     * contained in the given InputStream. Internal representation of the
+     * formula is w3c.dom.Node.
      *
-     * @param is InputStream with the formuale.
-     * @return Collection of the formulae in the form of Map<Double, List<String>>.
-     *         this map gives pairs {created formula, it's rank}. Key of the map is the
-     *         rank of the all formulae located in the list specified by the value of the Map.Entry.
+     * @param input InputStream with the formuale.
+     * @return Collection of the formulae in the form of Map&lt;Double,
+     * List&lt;String&gt;&gt;. this map gives pairs {created formula, it's
+     * rank}. Key of the map is the rank of the all formulae located in the list
+     * specified by the value of the Map.Entry.
      */
     private void processFormulae(Reader input) {
         try {
@@ -200,7 +222,7 @@ public class MathTokenizer extends Tokenizer {
                 load(doc);
                 order();
                 modify();
-//            printMap(formulae);
+                //printMap(formulae);
                 if (subformulae) {
                     for (List<Formula> forms : formulae.values()) {
                         producedF.addAndGet(forms.size());
@@ -209,7 +231,7 @@ public class MathTokenizer extends Tokenizer {
             }
 
             itMap = formulae.values().iterator();
-            itForms = Collections.<Formula> emptyList().iterator();;
+            itForms = Collections.<Formula>emptyList().iterator();
 
             increment = formulaPosition - 1; // NB: itForms is set to empty iterator and so increment will get incremented by one in nextIt()
         } catch (Exception e) {
@@ -219,16 +241,65 @@ public class MathTokenizer extends Tokenizer {
 
     private Document parseMathML(Reader input) {
         Document doc;
-        
+
         try {
-            org.jdom2.Document jdom2Doc = canonicalizer.canonicalize(new ReaderInputStream(input, "UTF-8"));            
+            org.jdom2.Document jdom2Doc = canonicalizer.canonicalize(new ReaderInputStream(input, "UTF-8"));
             doc = outputter.output(jdom2Doc);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Input could not be parsed (probably it is not valid MathML)", e);
             doc = null;
         }
-        
+
         return doc;
+    }
+
+    private boolean isTrivial(Formula formula) {
+
+        Node node = formula.getNode();
+
+        // Empty formula, root element only
+        if (node.getChildNodes().getLength() == 0) {
+            return true;
+        }
+        // Single variable/number/operator
+        if (node.getChildNodes().getLength() == 1
+                && node.getChildNodes().item(0).getNodeType() == Node.TEXT_NODE
+                && node.getLocalName() != null
+                && Arrays.asList(
+                        MathMLConstants.PMML_MI,
+                        MathMLConstants.PMML_MO,
+                        MathMLConstants.PMML_MN,
+                        MathMLConstants.CMML_CI,
+                        MathMLConstants.CMML_CN,
+                        MathMLConstants.CMML_CSYMBOL,
+                        MathMLConstants.CMML_PLUS,
+                        MathMLConstants.CMML_TIMES
+                ).contains(node.getLocalName())) {
+            return true;
+        }
+
+        return false;
+
+    }
+
+    private boolean addNontrivialFormula(int position, Formula formula) {
+        if (!isTrivial(formula)) {
+            formulae.get(position).add(formula);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private List<Formula> addAllNontrivialFormula(List<Formula> collectionToAddTo, List<Formula> formulaeToAdd) {
+        List<Formula> nontrivialFormulae = new ArrayList<>();
+        for (Formula f : formulaeToAdd) {
+            if (!isTrivial(f)) {
+                nontrivialFormulae.add(f);
+            }
+        }
+        collectionToAddTo.addAll(nontrivialFormulae);
+        return nontrivialFormulae;
     }
 
     /**
@@ -242,33 +313,34 @@ public class MathTokenizer extends Tokenizer {
             mathMLNamespace = "*";
         }
         NodeList list = doc.getElementsByTagNameNS(mathMLNamespace, MathMLConstants.MML_MATH);
+        if (list.getLength() == 0) {
+            list = doc.getElementsByTagNameNS("*", MathMLConstants.MML_MATH);
+        }
         inputF.addAndGet(list.getLength());
         for (int i = 0; i < list.getLength(); i++) {
             Node node = list.item(i);
             formulae.put(i, new ArrayList<Formula>());
-            if (subformulae) {
-                loadNode(node, 1 / valuator.count(node, mmlType), i);
-            } else {
-                loadNode(node, valuator.count(node, mmlType), i);
-            }
+            float rank = subformulae ? (1 / valuator.count(node, mmlType)) : valuator.count(node, mmlType);
+            loadNode(node, rank, i);
         }
     }
 
     /**
-     * Recursively called when loading also subformulae. Adds all the relevant nodes to the
-     * formuale1 map.
+     * Recursively called when loading also subformulae. Adds all the relevant
+     * nodes to the formuale1 map.
      *
      * @param n Node current MathML node.
-     * @param level current depth in the original formula tree which is also rank of the this Node
+     * @param level current depth in the original formula tree which is also
+     * rank of the this Node
      */
     private void loadNode(Node n, float level, int position) {
         if (n instanceof Element) {
             String name = n.getLocalName();
             if (!MathMLConf.ignoreNodeAndChildren(name)) {
                 boolean store = false;
-                if ((mmlType==MathMLType.BOTH && MathMLConf.isIndexableElement(name)) ||
-                    (mmlType==MathMLType.PRESENTATION && MathMLConf.isPresentationElement(name)) || 
-                    (mmlType==MathMLType.CONTENT && MathMLConf.isContentElement(name))) {
+                if ((mmlType == MathMLType.BOTH && MathMLConf.isIndexableElement(name))
+                        || (mmlType == MathMLType.PRESENTATION && MathMLConf.isIndexablePresentationElement(name))
+                        || (mmlType == MathMLType.CONTENT && MathMLConf.isIndexableContentElement(name))) {
                     store = true;
                 }
                 removeTextNodes(n);
@@ -277,20 +349,49 @@ public class MathTokenizer extends Tokenizer {
                 if (subformulae || !store) {
                     for (int j = 0; j < length; j++) {
                         Node node = nl.item(j);
-                        loadNode(node, store? level * lCoef : level, position);
+                        loadNode(node, store ? level * lCoef : level, position);
                     }
                 }
                 if (store && !MathMLConf.ignoreNode(name)) {
-                    formulae.get(position).add(new Formula(n, level));
-                }            
+                    addNontrivialFormula(position, new Formula(n, level));
+                    loadUnifiedNodes(n, level, position);
+                }
             }
         }
     }
-    
+
+    /**
+     * Called when loading formulae from the document one for every formula from
+     * the document. For the given node generates its structurally unified
+     * variants and adds them to the formulae map.
+     *
+     * @param n Node current MathML node.
+     * @param basicRank current depth in the original formula tree which is also
+     * rank of the this Node
+     * @param position position of the original formula in the map of formulae
+     */
+    private void loadUnifiedNodes(Node n, float basicWeight, int position) {
+        int nodeComplexity = (int) valuator.count(n, mmlType);
+        LOG.finer("Loading node of input complexity " + nodeComplexity + " for unification.");
+        if (nodeComplexity <= MathMLConf.inputNodeComplexityUnificationLimit) {
+            if (n.getNodeType() == Node.ELEMENT_NODE) {
+                HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n, false);
+                for (int uniLevel : unifiedMathMLNodes.keySet()) {
+                    Node un = unifiedMathMLNodes.get(uniLevel);
+                    float nodeWeightCoef = unifiedNodeValuator.count(un, mmlType);
+                    float weight = basicWeight * nodeWeightCoef;
+                    addNontrivialFormula(position, new Formula(un, weight));
+                }
+            }
+        } else {
+            LOG.info("Not unifying node of input complexity " + nodeComplexity + " exceeding set limit " + MathMLConf.inputNodeComplexityUnificationLimit + ".");
+        }
+    }
+
     /**
      * Removes unnecessary text nodes from the markup
-     * 
-     * @param node 
+     *
+     * @param node
      */
     private void removeTextNodes(Node node) {
         NodeList nl = node.getChildNodes();
@@ -308,9 +409,11 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
-     * Removes all attributes except those specified in the attr-dict configuration file
-     * 
-     * @param rank factor by which the formulae keeping the attributes increase their weight
+     * Removes all attributes except those specified in the attr-dict
+     * configuration file
+     *
+     * @param rank factor by which the formulae keeping the attributes increase
+     * their weight
      */
     private void processAttributes(float rank) {
         List<Formula> result = new ArrayList<Formula>();
@@ -378,9 +481,9 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
-     * Provides sorting of elements in MathML formula based on the NodeName. Sorting is
-     * done for operators from the operators configuration file. All sorted formulae
-     * replace their original forms in the formulae map.
+     * Provides sorting of elements in MathML formula based on the NodeName.
+     * Sorting is done for operators from the operators configuration file. All
+     * sorted formulae replace their original forms in the formulae map.
      */
     private void order() {
         for (List<Formula> forms : formulae.values()) {
@@ -393,15 +496,15 @@ public class MathTokenizer extends Tokenizer {
 
     private Node orderNode(Node node) {
         if (node instanceof Element) {
-        List<Node> nodes = new ArrayList<Node>();
-        NodeList nl = node.getChildNodes();
-        if (nl.getLength() > 1) {
-            for (int i = 0; i < nl.getLength(); i++) {
-                Node n = nl.item(i);
-                orderNode(n);
-                nodes.add(n);
-            }
-            if (mmlType == MathMLType.PRESENTATION) {
+            List<Node> nodes = new ArrayList<Node>();
+            NodeList nl = node.getChildNodes();
+            if (nl.getLength() > 1) {
+                for (int i = 0; i < nl.getLength(); i++) {
+                    Node n = nl.item(i);
+                    orderNode(n);
+                    nodes.add(n);
+                }
+                if (mmlType == MathMLType.PRESENTATION) {
                     boolean switched;
                     for (Node justCycle : nodes) {
                         switched = false;
@@ -469,14 +572,12 @@ public class MathTokenizer extends Tokenizer {
         result = nodeToString(node, true);
         return result;
     }
-    
+
     /**
      * Converts a node to M-term styled string representation
      */
     private String nodeToString(Node node, boolean withoutTextContent) {
-        StringBuilder builder = new StringBuilder();        
-        Formula.nodeToString(builder, node, withoutTextContent, eldict, attrdict, MathMLConf.getIgnoreNode());
-        return builder.toString();
+        return Formula.nodeToString(node, withoutTextContent, eldict, attrdict, MathMLConf.getIgnoreNode());
     }
 
     /**
@@ -484,8 +585,8 @@ public class MathTokenizer extends Tokenizer {
      *
      * @param i number of Node in the given list that sorrounding are to be swap
      * @param nodes List of childNodes of some formula, that are to be sorted
-     * @return true if the Node i was operation + or * and the surrounding can be swapped,
-     *         false otherwise
+     * @return true if the Node i was operation + or * and the surrounding can
+     * be swapped, false otherwise
      */
     private boolean canSwap(String text, int i, List<Node> nodes) {
         boolean result = true;
@@ -508,21 +609,22 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
-     * Provides all the modifying on the loaded formulae located in formuale map.
-     * Calls several modifiing methods and specifies how they should alter the rank of
-     * modified formula.
+     * Provides all the modifying on the loaded formulae located in formuale
+     * map. Calls several modifiing methods and specifies how they should alter
+     * the rank of modified formula.
      */
     private void modify() {
         unifyVariables(vCoef);
         unifyConst(cCoef);
+        unifyOperators(oCoef);
         processAttributes(aCoef);
     }
-    
+
     /**
      * Unifies variables of each formula in formulae map
      *
-     * @param rank Specifies the factor by which it should alter the rank of modified formula
-     * 
+     * @param rank Specifies the factor by which it should alter the rank of
+     * modified formula
      */
     private void unifyVariables(float rank) {
         List<Formula> result = new ArrayList<Formula>();
@@ -536,46 +638,69 @@ public class MathTokenizer extends Tokenizer {
                     hasElement = false;
                 }
                 if (hasElement) {
-                    Map<String, String> changes = new HashMap<String, String>();
-                    Node newNode = node.cloneNode(true);
-                    boolean changed = unifyVariablesNode(newNode, changes);
-                    if (changed) {
-                        result.add(new Formula(newNode, f.getWeight() * rank));
+                    for (boolean keepAlphaEquivalence : trueFalseCollection) {
+                        Map<String, String> changes = new HashMap<String, String>();
+                        Node newNode = node.cloneNode(true);
+                        boolean changed = unifyVariablesNode(newNode, changes, keepAlphaEquivalence);
+                        if (changed) {
+                            result.add(new Formula(newNode, f.getWeight() * (keepAlphaEquivalence ? rank : vCoefGen * rank)));
+                        }
                     }
                 }
             }
-            forms.addAll(result);
+            addAllNontrivialFormula(forms, result);
         }
     }
 
     /**
-     * Recursively modifying variables of the formula or subformula specified by given Node
+     * Recursively modifying variables of the formula or subformula specified by
+     * given Node
      *
-     * @param node Node representing current formula or subformula that is being modified
-     * @param changes Map holding the performed changes, so that the variables with the same
-     *        name are always substituted with the same unified name within the scope of each formula.
+     * @param node Node representing current formula or subformula that is being
+     * modified
+     * @param changes Map holding the performed changes, so that the variables
+     * with the same name are always substituted with the same unified name
+     * within the scope of each formula.
+     * @param keepAlphaEquivalence If <code>true</code> variable unification
+     * will preserve alfa equivalence, i.e. identical variables will be
+     * preserved with one symbol distinct from substituing symbols used for
+     * different variable using <code>changes</code> map. If <code>false</code>,
+     * variable will be unified with general unification symbol (see
+     * {@link MathMLUnificator#replaceNodeWithUnificator(org.w3c.dom.Node)}).
      * @return Saying whether or not this formula was modified
      */
-    private boolean unifyVariablesNode(Node node, Map<String, String> changes) {
+    private boolean unifyVariablesNode(Node node, Map<String, String> changes, boolean keepAlphaEquivalence) {
         boolean result = false;
         if (node instanceof Element) {
             NodeList nl = node.getChildNodes();
             for (int j = 0; j < nl.getLength(); j++) {
-                result = unifyVariablesNode(nl.item(j), changes) == false ? result : true;
+                result = unifyVariablesNode(nl.item(j), changes, keepAlphaEquivalence) == false ? result : true;
             }
             if (MathMLConstants.PMML_MI.equals(node.getLocalName()) || MathMLConstants.CMML_CI.equals(node.getLocalName())) {
                 String oldVar = node.getTextContent();
-                String newVar = toVar(oldVar, changes);
-                node.setTextContent(newVar);
-                return true;
+                if (oldVar != null && !oldVar.equals(Constants.UNIFICATOR)) {
+                    if (keepAlphaEquivalence) {
+                        String newVar = toVar(oldVar, changes);
+                        node.setTextContent(newVar);
+                        result = true;
+                    } else {
+                        try {
+                            MathMLUnificator.replaceNodeWithUnificator(node);
+                            result = true;
+                        } catch (Exception ex) {
+                            LOG.log(Level.WARNING, "Replacing node with unificator failed: " + ex.getMessage(), ex);
+                        }
+                    }
+                }
+
             }
         }
         return result;
     }
 
     /**
-     * Helping method performs substitution of the variable based on the given map of
-     * already done changes.
+     * Helping method performs substitution of the variable based on the given
+     * map of already done changes.
      *
      * @param oldVar Variable to be unified
      * @param changes Map with already done changes.
@@ -591,7 +716,8 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
-     * Performing unifying of all the constants in the formula by substituting them for "const" string.
+     * Performing unifying of all the constants in the formula by substituting
+     * them for "const" string.
      *
      * @param rank Specifies how the method should alter modified formulae
      */
@@ -614,14 +740,16 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
             }
-            forms.addAll(result);
+            addAllNontrivialFormula(forms, result);
         }
     }
 
     /**
-     * Recursively modifying constants of the formula or subformula specified by given Node
+     * Recursively modifying constants of the formula or subformula specified by
+     * given Node
      *
-     * @param node Node representing current formula or subformula that is being modified
+     * @param node Node representing current formula or subformula that is being
+     * modified
      * @return Saying whether or not this formula was modified
      */
     private boolean unifyConstNode(Node node) {
@@ -640,7 +768,72 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
-     * @return Processed formulae to be used for a query. No subformulae are extracted.
+     * Performing unifying of all operators in the formula by substituting them
+     * for some general string unifiny all "similar" oprators (i.e. substitute
+     * "+", "-", "±" etc. for "+").
+     *
+     * @param rank Specifies how the method should alter modified formulae
+     * weight
+     * @return Saying whether or not this formula was modified
+     */
+    private void unifyOperators(float rank) {
+        List<Formula> result = new ArrayList<Formula>();
+        for (List<Formula> forms : formulae.values()) {
+            result.clear();
+            for (Formula f : forms) {
+                Node node = f.getNode();
+                NodeList nl = node.getChildNodes();
+                boolean hasElement = true;
+                if (((nl.getLength() == 1) && !(nl.item(0) instanceof Element)) || nl.getLength() == 0) {
+                    hasElement = false;
+                }
+                if (hasElement) {
+                    Node newNode = node.cloneNode(true);
+                    boolean changed = unifyOperatorsNode(newNode);
+                    if (changed) {
+                        result.add(new Formula(newNode, f.getWeight() * rank));
+                    }
+                }
+            }
+            addAllNontrivialFormula(forms, result);
+        }
+    }
+
+    /**
+     * Recursively modifying operators of the formula or subformula specified by
+     * given Node. The operator will be substituted for some general string
+     * unifiny all "similar" oprators (i.e. substitute "+", "-", "±" etc. for
+     * "+").
+     *
+     * @param node Node representing current formula or subformula that is being
+     * modified
+     * @return Saying whether or not this formula was modified
+     */
+    private boolean unifyOperatorsNode(Node node) {
+        boolean result = false;
+        if (node instanceof Element) {
+            NodeList nl = node.getChildNodes();
+            for (int j = 0; j < nl.getLength(); j++) {
+                result = unifyOperatorsNode(nl.item(j)) == false ? result : true;
+            }
+            if (node.getLocalName() != null
+                    && node.getLocalName().equals(MathMLConstants.PMML_MO)
+                    && MathMLConf.additiveOperators.contains(node.getTextContent())) {
+                node.setTextContent("+");
+                result = true;
+            } else if (node.getLocalName() != null
+                    && MathMLConf.additiveOperators.contains(node.getLocalName())) {
+                Node unifiedCmmlOperator = node.getOwnerDocument().createElement("op");
+                node.getParentNode().replaceChild(unifiedCmmlOperator, node);
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @return Processed formulae to be used for a query. No subformulae are
+     * extracted.
      */
     public Map<String, Float> getQueryFormulae() {
         Map<String, Float> result = new HashMap<String, Float>();
@@ -655,10 +848,13 @@ public class MathTokenizer extends Tokenizer {
     private void printMap(Map<Integer, List<Formula>> formulae) {
         for (Map.Entry<Integer, List<Formula>> entry : formulae.entrySet()) {
             List<Formula> forms = entry.getValue();
+            int counter = 1;
             for (Formula f : forms) {
-                LOG.info(entry.getKey() + " " + nodeToString(f.getNode(), false) + " " + f.getWeight());
+                StringBuilder sb = new StringBuilder("### Formula no. " + counter++ + " ###\n");
+                sb.append(entry.getKey() + " " + nodeToString(f.getNode(), false) + " " + f.getWeight() + "\n");
+                sb.append(XMLOut.xmlStringSerializer(f.getNode()));
+                System.out.println(sb.toString());
             }
-            LOG.info("");
         }
     }
 
@@ -671,10 +867,12 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
-     * @return A map with formulae as if they are indexed. Key of the map is the original document position of the extracted formulae contained in the value of the map.
+     * @return A map with formulae as if they are indexed. Key of the map is the
+     * original document position of the extracted formulae contained in the
+     * value of the map.
      */
     public Map<Integer, List<Formula>> getFormulae() {
         return formulae;
     }
-    
+
 }

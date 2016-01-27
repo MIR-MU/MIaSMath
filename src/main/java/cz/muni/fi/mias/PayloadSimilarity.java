@@ -5,8 +5,9 @@ import org.apache.lucene.search.similarities.DefaultSimilarity;
 import org.apache.lucene.util.BytesRef;
 
 /**
- * PayloadSimilarity class extending default similarity. Alters the way how lucene scores hit documents
- * in order to consider payloads located at formuale in index.
+ * PayloadSimilarity class extending default similarity. Alters the way how
+ * lucene scores hit documents in order to consider payloads located at formuale
+ * in index.
  */
 public class PayloadSimilarity extends DefaultSimilarity {
 
