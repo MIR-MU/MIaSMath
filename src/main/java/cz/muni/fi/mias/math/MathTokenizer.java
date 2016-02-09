@@ -75,6 +75,7 @@ public class MathTokenizer extends Tokenizer {
     private float vCoefGen = 0.03f;
     private float cCoef = 0.5f;
     private float oCoef = 0.8f;
+    private float mCoef = 0.9f;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
     private final MathMLType mmlType;
@@ -324,8 +325,8 @@ public class MathTokenizer extends Tokenizer {
             formulae.put(i, new ArrayList<Formula>());
             float rank = subformulae ? (1 / valuator.count(node, mmlType)) : valuator.count(node, mmlType);
             Node node1 = MapleUnifier.mapleUnifyMathML(node);
-            if (!node1.equals(node)) {
-                loadNode(node, (rank * 0.9f) , i);
+            if (node1 != null) {
+                loadNode(node, (rank * mCoef) , i);
             }
             loadNode(node, rank, i);
 
