@@ -34,9 +34,7 @@ import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.util.ByteBlockPool;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.BytesRefHash;
 import org.jdom2.output.DOMOutputter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -48,7 +46,6 @@ import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
 import cz.muni.fi.mir.mathmlunificator.MathMLUnificator;
 import cz.muni.fi.mir.mathmlunificator.config.Constants;
 import cz.muni.fi.mir.mathmlunificator.utils.XMLOut;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -63,10 +60,7 @@ public class MathTokenizer extends Tokenizer {
 
     private static final Logger LOG = Logger.getLogger(MathTokenizer.class.getName());
 
-    /**
-     * Maximal Lucene field length in bytes according to {@link BytesRefHash}.
-     */
-    public static final int MAX_LUCENE_TEXT_FIELD_LENGTH = ByteBlockPool.BYTE_BLOCK_SIZE - 2;
+    public static final int TOKEN_TRIM_LENGTH = 20000;
 
     private static final FormulaValuator valuator = new CountNodesFormulaValuator();
     private static final UnifiedFormulaValuator unifiedNodeValuator = new UnifiedFormulaValuator();
@@ -150,20 +144,9 @@ public class MathTokenizer extends Tokenizer {
             termAtt.setEmpty();
             String nodeString = nodeToString(f.getNode(), false);
             // Trim node string representation to fit Lucene index term max size
-            if (nodeString.getBytes().length > MAX_LUCENE_TEXT_FIELD_LENGTH) {
-                int oldLength = nodeString.getBytes().length;
-                // The max length is specified in bytes. However, the string potentially contains multi-byte characters.
-                // Thus, we have to cut off at boundary of characters but not exceeding the length in bytes.
-                // At http://www.jroller.com/holy/entry/truncating_utf_string_to_the the exploitation of String constructor
-                // behaviour on invalid UTF-8 sequences is suggested:
-                //   ’The new String constructor will automatically replace any invalid character (i.e. incomplete
-                //   utf-8 char; we may only have one at the end) with the character \uFFFD, which looks like an
-                //   empty rectangle. This character requires 3 bytes in utf-8 - therefore we decrease
-                //   DB_FIELD_LENGTH by 2; the resulting string will have either exactly maxLen bytes if its
-                //   last byte(s) is a valid utf-8 character or maxLen+2 bytes if it isn't valid and this 1 byte
-                //   was replaced by \uFFFD (3B)’
-                nodeString = new String(nodeString.getBytes(StandardCharsets.UTF_8), 0, MAX_LUCENE_TEXT_FIELD_LENGTH - 2, StandardCharsets.UTF_8);
-                LOG.warning("Node string representation too long (" + oldLength + " bytes), cut to " + nodeString.getBytes().length + " bytes.");
+            if (nodeString.length() >= TOKEN_TRIM_LENGTH) {
+                LOG.warning("Node string representation too long (" + nodeString.length() + " chars), cut to " + TOKEN_TRIM_LENGTH + " chars.");
+                nodeString.substring(0, TOKEN_TRIM_LENGTH);
             }
             termAtt.append(nodeString);
             byte[] payload = PayloadHelper.encodeFloatToShort(f.getWeight());
