@@ -14,6 +14,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import cz.muni.fi.mias.math.maple.MapleUnifier;
 import org.apache.commons.io.input.ReaderInputStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -321,7 +323,12 @@ public class MathTokenizer extends Tokenizer {
             Node node = list.item(i);
             formulae.put(i, new ArrayList<Formula>());
             float rank = subformulae ? (1 / valuator.count(node, mmlType)) : valuator.count(node, mmlType);
+            Node node1 = MapleUnifier.mapleUnifyMathML(node);
+            if (!node1.equals(node)) {
+                loadNode(node, (rank * 0.9f) , i);
+            }
             loadNode(node, rank, i);
+
         }
     }
 

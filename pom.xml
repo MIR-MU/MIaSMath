@@ -55,6 +55,16 @@
             <artifactId>junit</artifactId>
             <version>4.12</version>
         </dependency>
+        <dependency>
+            <groupId>com.maplesoft</groupId>
+            <artifactId>maple-externalcall</artifactId>
+            <version>2015</version>
+        </dependency>
+        <dependency>
+            <groupId>com.maplesoft</groupId>
+            <artifactId>maple-core</artifactId>
+            <version>2015</version>
+        </dependency>
     </dependencies>
     
     <build>
