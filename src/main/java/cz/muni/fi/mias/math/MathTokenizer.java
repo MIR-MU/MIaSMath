@@ -1,3 +1,18 @@
+/*
+ * Copyright 2016 MIR@MU Project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package cz.muni.fi.mias.math;
 
 import java.io.IOException;
@@ -53,15 +68,15 @@ public class MathTokenizer extends Tokenizer {
      */
     public static final int MAX_LUCENE_TEXT_FIELD_LENGTH = ByteBlockPool.BYTE_BLOCK_SIZE - 2;
 
-    private static FormulaValuator valuator = new CountNodesFormulaValuator();
-    private static UnifiedFormulaValuator unifiedNodeValuator = new UnifiedFormulaValuator();
-    private static Map<String, List<String>> ops = MathMLConf.getOperators();
-    private static Map<String, String> eldict = MathMLConf.getElementDictionary();
-    private static Map<String, String> attrdict = MathMLConf.getAttrDictionary();
+    private static final FormulaValuator valuator = new CountNodesFormulaValuator();
+    private static final UnifiedFormulaValuator unifiedNodeValuator = new UnifiedFormulaValuator();
+    private static final Map<String, List<String>> ops = MathMLConf.getOperators();
+    private static final Map<String, String> eldict = MathMLConf.getElementDictionary();
+    private static final Map<String, String> attrdict = MathMLConf.getAttrDictionary();
 
     // statistics
-    private static AtomicLong inputF = new AtomicLong(0);
-    private static AtomicLong producedF = new AtomicLong(0);
+    private static final AtomicLong inputF = new AtomicLong(0);
+    private static final AtomicLong producedF = new AtomicLong(0);
 
     // utilities
     private final MathMLCanonicalizer canonicalizer = MathMLCanonicalizer.getDefaultCanonicalizer();
@@ -70,9 +85,9 @@ public class MathTokenizer extends Tokenizer {
     // configuration
     private float lCoef = 0.7f;
     private float vCoef = 0.8f;
-    private float vCoefGen = 0.03f;
+    private final float vCoefGen = 0.03f;
     private float cCoef = 0.5f;
-    private float oCoef = 0.8f;
+    private final float oCoef = 0.8f;
     private final float aCoef = 1.2f;
     private final boolean subformulae;
     private final MathMLType mmlType;
@@ -84,7 +99,7 @@ public class MathTokenizer extends Tokenizer {
     private final CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
     private final PayloadAttribute payAtt = addAttribute(PayloadAttribute.class);
     private final PositionIncrementAttribute posAtt = addAttribute(PositionIncrementAttribute.class);
-    private final Map<Integer, List<Formula>> formulae = new LinkedHashMap<Integer, List<Formula>>();
+    private final Map<Integer, List<Formula>> formulae = new LinkedHashMap<>();
     private Iterator<List<Formula>> itMap = Collections.<List<Formula>>emptyList().iterator();
     private Iterator<Formula> itForms = Collections.<Formula>emptyList().iterator();
     private int increment;
@@ -319,7 +334,7 @@ public class MathTokenizer extends Tokenizer {
         inputF.addAndGet(list.getLength());
         for (int i = 0; i < list.getLength(); i++) {
             Node node = list.item(i);
-            formulae.put(i, new ArrayList<Formula>());
+            formulae.put(i, new ArrayList<>());
             float rank = subformulae ? (1 / valuator.count(node, mmlType)) : valuator.count(node, mmlType);
             loadNode(node, rank, i);
         }
@@ -416,7 +431,7 @@ public class MathTokenizer extends Tokenizer {
      * their weight
      */
     private void processAttributes(float rank) {
-        List<Formula> result = new ArrayList<Formula>();
+        List<Formula> result = new ArrayList<>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
             for (Formula f : forms) {
@@ -442,7 +457,7 @@ public class MathTokenizer extends Tokenizer {
         }
         if (node.hasAttributes()) {
             NamedNodeMap attrs = node.getAttributes();
-            Set<Node> keepAttrs = new HashSet<Node>();
+            Set<Node> keepAttrs = new HashSet<>();
             for (String dictAttr : attrdict.keySet()) {
                 Node keepAttr = attrs.getNamedItem(dictAttr);
                 if (keepAttr != null) {
@@ -474,8 +489,8 @@ public class MathTokenizer extends Tokenizer {
             for (int i = 0; i < names.length; i++) {
                 names[i] = attrs.item(i).getNodeName();
             }
-            for (int i = 0; i < names.length; i++) {
-                attrs.removeNamedItem(names[i]);
+            for (String name : names) {
+                attrs.removeNamedItem(name);
             }
         }
     }
@@ -496,7 +511,7 @@ public class MathTokenizer extends Tokenizer {
 
     private Node orderNode(Node node) {
         if (node instanceof Element) {
-            List<Node> nodes = new ArrayList<Node>();
+            List<Node> nodes = new ArrayList<>();
             NodeList nl = node.getChildNodes();
             if (nl.getLength() > 1) {
                 for (int i = 0; i < nl.getLength(); i++) {
@@ -564,7 +579,7 @@ public class MathTokenizer extends Tokenizer {
             String n2Children = getNodeChildren(n2);
             c = n1Children.compareTo(n2Children);
         }
-        return c > 0 ? true : false;
+        return c > 0;
     }
 
     private String getNodeChildren(Node node) {
@@ -627,7 +642,7 @@ public class MathTokenizer extends Tokenizer {
      * modified formula
      */
     private void unifyVariables(float rank) {
-        List<Formula> result = new ArrayList<Formula>();
+        List<Formula> result = new ArrayList<>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
             for (Formula f : forms) {
@@ -639,7 +654,7 @@ public class MathTokenizer extends Tokenizer {
                 }
                 if (hasElement) {
                     for (boolean keepAlphaEquivalence : trueFalseCollection) {
-                        Map<String, String> changes = new HashMap<String, String>();
+                        Map<String, String> changes = new HashMap<>();
                         Node newNode = node.cloneNode(true);
                         boolean changed = unifyVariablesNode(newNode, changes, keepAlphaEquivalence);
                         if (changed) {
@@ -722,7 +737,7 @@ public class MathTokenizer extends Tokenizer {
      * @param rank Specifies how the method should alter modified formulae
      */
     private void unifyConst(float rank) {
-        List<Formula> result = new ArrayList<Formula>();
+        List<Formula> result = new ArrayList<>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
             for (Formula f : forms) {
@@ -777,7 +792,7 @@ public class MathTokenizer extends Tokenizer {
      * @return Saying whether or not this formula was modified
      */
     private void unifyOperators(float rank) {
-        List<Formula> result = new ArrayList<Formula>();
+        List<Formula> result = new ArrayList<>();
         for (List<Formula> forms : formulae.values()) {
             result.clear();
             for (Formula f : forms) {
@@ -836,7 +851,7 @@ public class MathTokenizer extends Tokenizer {
      * extracted.
      */
     public Map<String, Float> getQueryFormulae() {
-        Map<String, Float> result = new HashMap<String, Float>();
+        Map<String, Float> result = new HashMap<>();
         for (List<Formula> forms : formulae.values()) {
             for (Formula f : forms) {
                 result.put(nodeToString(f.getNode(), false), f.getWeight());
@@ -851,7 +866,7 @@ public class MathTokenizer extends Tokenizer {
             int counter = 1;
             for (Formula f : forms) {
                 StringBuilder sb = new StringBuilder("### Formula no. " + counter++ + " ###\n");
-                sb.append(entry.getKey() + " " + nodeToString(f.getNode(), false) + " " + f.getWeight() + "\n");
+                sb.append(entry.getKey()).append(" ").append(nodeToString(f.getNode(), false)).append(" ").append(f.getWeight()).append("\n");
                 sb.append(XMLOut.xmlStringSerializer(f.getNode()));
                 System.out.println(sb.toString());
             }
