@@ -75,6 +75,7 @@ public class MathTokenizer extends Tokenizer {
     private final boolean subformulae;
     private final MathMLType mmlType;
     private int formulaPosition = 1;
+    private final boolean addTrivialFormulae = true;
 
     // fields with state related to tokenization of current input;
     // fields must be correctly reset in order for this tokenizer to be re-usable
@@ -270,8 +271,8 @@ public class MathTokenizer extends Tokenizer {
 
     }
 
-    private boolean addNontrivialFormula(int position, Formula formula) {
-        if (!isTrivial(formula)) {
+    private boolean addFormula(int position, Formula formula) {
+        if (addTrivialFormulae || !isTrivial(formula)) {
             formulae.get(position).add(formula);
             return true;
         } else {
@@ -279,10 +280,10 @@ public class MathTokenizer extends Tokenizer {
         }
     }
 
-    private List<Formula> addAllNontrivialFormula(List<Formula> collectionToAddTo, List<Formula> formulaeToAdd) {
+    private List<Formula> addAllFormulea(List<Formula> collectionToAddTo, List<Formula> formulaeToAdd) {
         List<Formula> nontrivialFormulae = new ArrayList<>();
         for (Formula f : formulaeToAdd) {
-            if (!isTrivial(f)) {
+            if (addTrivialFormulae || !isTrivial(f)) {
                 nontrivialFormulae.add(f);
             }
         }
@@ -338,7 +339,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
                 if (store && !MathMLConf.ignoreNode(name)) {
-                    addNontrivialFormula(position, new Formula(n, level));
+                    addFormula(position, new Formula(n, level));
                     loadUnifiedNodes(n, level, position);
                 }
             }
@@ -367,7 +368,7 @@ public class MathTokenizer extends Tokenizer {
                     float nodeWeightCoef = 0.5f * ((float) (maxUniLevel - uniLevel) / maxUniLevel);
                     if (nodeWeightCoef >= MathMLConf.unifiedNodeWeightCoefThreshold) {
                         float weight = basicWeight * nodeWeightCoef;
-                        addNontrivialFormula(position, new Formula(un, weight));
+                        addFormula(position, new Formula(un, weight));
                     }
                 }
             }
@@ -636,7 +637,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
             }
-            addAllNontrivialFormula(forms, result);
+            addAllFormulea(forms, result);
         }
     }
 
@@ -724,7 +725,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
             }
-            addAllNontrivialFormula(forms, result);
+            addAllFormulea(forms, result);
         }
     }
 
@@ -779,7 +780,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
             }
-            addAllNontrivialFormula(forms, result);
+            addAllFormulea(forms, result);
         }
     }
 
