@@ -17,7 +17,7 @@ public class MIaSMathUtils {
 
     private static final Logger log = Logger.getLogger(MIaSMathUtils.class.getName());
 
-    private static final String MATHML_DTD = "/cz/muni/fi/mias/math/xhtml-math11-f.dtd";
+    public static final String MATHML_DTD = "/cz/muni/fi/mias/math/xhtml-math11-f.dtd";
 
     public static DocumentBuilder prepareDocumentBuilder() throws ParserConfigurationException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();

@@ -4,21 +4,27 @@ import com.maplesoft.externalcall.MapleException;
 import com.maplesoft.openmaple.Algebraic;
 import com.maplesoft.openmaple.Engine;
 import com.maplesoft.openmaple.EngineCallBacksDefault;
+import cz.muni.fi.mias.MIaSMathUtils;
 import cz.muni.fi.mir.mathmlcanonicalization.MathMLCanonicalizer;
-import cz.muni.fi.mir.mathmlcanonicalization.modules.ModuleException;
-import org.jdom2.JDOMException;
 import org.jdom2.output.DOMOutputter;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
-import javax.xml.stream.XMLStreamException;
-import javax.xml.transform.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.StringWriter;
-import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -47,9 +53,9 @@ public class MapleUnifier {
             try {
                 mathml = mathml.replaceAll("\"", "'");
                 Algebraic importExpression = engine.evaluate("MathML['Import'](\"" + mathml + "\"):");
-                Algebraic exportExpression = engine.evaluate("MathML['Export'](\"" + importExpression.toString() + "\"):");
+                Algebraic exportExpression = engine.evaluate("MathML['Export']('" + importExpression.toString() + "'):");
                 String export = exportExpression.toString();
-                return export.substring(1, export.length() - 1).replaceAll("'", "\"");
+                return export.substring(1, export.length() - 1).replaceAll("'", "\"").replaceAll("ApplyFunction", "#8289");
             } catch (MapleException e) {
                 LOG.log(Level.SEVERE, "Cannot unify expression " + e.getMessage() + ", " + mathml);
             }
@@ -66,9 +72,10 @@ public class MapleUnifier {
                 if (unifiedMathMLString == null) {
                     return null;
                 }
-                org.jdom2.Document jdom2Doc = canonicalizer.canonicalize(new ByteArrayInputStream(unifiedMathMLString.getBytes()));
-                Element documentElement = outputter.output(jdom2Doc).getDocumentElement();
-                return documentElement;
+                DocumentBuilder documentBuilder = MIaSMathUtils.prepareDocumentBuilder();
+                unifiedMathMLString = "<?xml version='1.0' encoding='UTF-8'?><!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN\" \"http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd\"><html>" + unifiedMathMLString + "</html>";
+                Document parse = documentBuilder.parse(new ByteArrayInputStream(unifiedMathMLString.getBytes()));
+                return parse.getElementsByTagName("math").item(0);
             } catch (Exception e) {
                 LOG.log(Level.SEVERE, "", e);
             }
@@ -102,4 +109,5 @@ public class MapleUnifier {
         }
         return engine;
     }
+
 }
