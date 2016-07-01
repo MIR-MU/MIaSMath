@@ -361,7 +361,7 @@ public class MathTokenizer extends Tokenizer {
                     }
                 }
                 if (store && !MathMLConf.ignoreNode(name)) {
-                    addFormula(position, new Formula(n, level));
+                    addFormula(position, new Formula(n, level, level));
                     loadUnifiedNodes(n, level, position);
                 }
             }
@@ -388,7 +388,7 @@ public class MathTokenizer extends Tokenizer {
                     Node un = unifiedMathMLNodes.get(uniLevel);
                     float nodeWeightCoef = unifiedNodeValuator.value(un, mmlType);
                     float weight = basicWeight * nodeWeightCoef;
-                    addFormula(position, new Formula(un, weight));
+                    addFormula(position, new Formula(un, weight, basicWeight));
                 }
             }
         } else {
@@ -433,7 +433,7 @@ public class MathTokenizer extends Tokenizer {
                 removeAttributes(node);
                 boolean changed = processAttributesNode(newNode);
                 if (changed) {
-                    result.add(new Formula(newNode, f.getWeight() * rank));
+                    result.add(new Formula(newNode, f.getWeight() * rank, f.getOriginalFormulaWeight()));
                 }
             }
             forms.addAll(result);
@@ -651,7 +651,7 @@ public class MathTokenizer extends Tokenizer {
                         Node newNode = node.cloneNode(true);
                         boolean changed = unifyVariablesNode(newNode, changes, keepAlphaEquivalence);
                         if (changed) {
-                            result.add(new Formula(newNode, f.getWeight() * (keepAlphaEquivalence ? rank : vCoefGen * rank)));
+                            result.add(new Formula(newNode, f.getWeight() * (keepAlphaEquivalence ? rank : vCoefGen * rank), f.getOriginalFormulaWeight()));
                         }
                     }
                 }
@@ -744,7 +744,7 @@ public class MathTokenizer extends Tokenizer {
                     Node newNode = node.cloneNode(true);
                     boolean changed = unifyConstNode(newNode);
                     if (changed) {
-                        result.add(new Formula(newNode, f.getWeight() * rank));
+                        result.add(new Formula(newNode, f.getWeight() * rank, f.getOriginalFormulaWeight()));
                     }
                 }
             }
@@ -799,7 +799,7 @@ public class MathTokenizer extends Tokenizer {
                     Node newNode = node.cloneNode(true);
                     boolean changed = unifyOperatorsNode(newNode);
                     if (changed) {
-                        result.add(new Formula(newNode, f.getWeight() * rank));
+                        result.add(new Formula(newNode, f.getWeight() * rank, f.getOriginalFormulaWeight()));
                     }
                 }
             }
