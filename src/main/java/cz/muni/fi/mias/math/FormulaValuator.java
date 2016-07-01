@@ -18,7 +18,9 @@ package cz.muni.fi.mias.math;
 import org.w3c.dom.Node;
 
 /**
- * Interface for computing formula's complexity.
+ * Interface for computing {@link Node} ‘value’ – abstract measure of some
+ * quality or property of the {@link Node} such as its complexity (given by
+ * number of subnodes etc.), for example.
  *
  * @author Martin Liska
  */
@@ -28,8 +30,8 @@ public interface FormulaValuator {
      * @param node MathML node denoting a formula
      * @param mmlType Type of the MathML which needs to be considered in the
      * valuation
-     * @return formula's complexity
+     * @return value of implemented metric for the given formula
      */
-    float count(Node node, MathTokenizer.MathMLType mmlType);
+    float value(Node node, MathTokenizer.MathMLType mmlType);
 
 }
