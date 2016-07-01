@@ -62,7 +62,16 @@ public class MathTokenizer extends Tokenizer {
 
     public static final int TOKEN_TRIM_LENGTH = 20000;
 
-    private static final FormulaValuator valuator = new CountNodesFormulaValuator();
+    private static final FormulaValuator formulaComplexityValuator = new CountNodesFormulaValuator();
+    /*
+     * Alternatively you can use constant value as the initial rank (weight) of
+     * any input formula (use of constant value results in more accurate 
+     * ranking of documents if two or more formulae of different complexity is 
+     * used in one query):
+     *
+     * private static final FormulaValuator inputFormulaValuator = new ConstantFormulaValuator();
+     */
+    private static final FormulaValuator inputFormulaValuator = formulaComplexityValuator;
     private static final UnifiedFormulaValuator unifiedNodeValuator = new UnifiedFormulaValuator();
     private static final Map<String, List<String>> ops = MathMLConf.getOperators();
     private static final Map<String, String> eldict = MathMLConf.getElementDictionary();
@@ -319,7 +328,7 @@ public class MathTokenizer extends Tokenizer {
         for (int i = 0; i < list.getLength(); i++) {
             Node node = list.item(i);
             formulae.put(i, new ArrayList<>());
-            float rank = subformulae ? (1 / valuator.count(node, mmlType)) : valuator.count(node, mmlType);
+            float rank = subformulae ? (1 / inputFormulaValuator.value(node, mmlType)) : inputFormulaValuator.value(node, mmlType);
             loadNode(node, rank, i);
         }
     }
@@ -370,14 +379,14 @@ public class MathTokenizer extends Tokenizer {
      * @param position position of the original formula in the map of formulae
      */
     private void loadUnifiedNodes(Node n, float basicWeight, int position) {
-        int nodeComplexity = (int) valuator.count(n, mmlType);
+        int nodeComplexity = (int) formulaComplexityValuator.value(n, mmlType);
         LOG.finer("Loading node of input complexity " + nodeComplexity + " for unification.");
         if (nodeComplexity <= MathMLConf.inputNodeComplexityUnificationLimit) {
             if (n.getNodeType() == Node.ELEMENT_NODE) {
                 HashMap<Integer, Node> unifiedMathMLNodes = MathMLUnificator.getUnifiedMathMLNodes(n, false);
                 for (int uniLevel : unifiedMathMLNodes.keySet()) {
                     Node un = unifiedMathMLNodes.get(uniLevel);
-                    float nodeWeightCoef = unifiedNodeValuator.count(un, mmlType);
+                    float nodeWeightCoef = unifiedNodeValuator.value(un, mmlType);
                     float weight = basicWeight * nodeWeightCoef;
                     addFormula(position, new Formula(un, weight));
                 }
