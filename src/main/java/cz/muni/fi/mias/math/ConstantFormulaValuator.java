@@ -68,13 +68,13 @@ public class ConstantFormulaValuator implements FormulaValuator {
     /**
      * Returns constant value set to be returned for any node by this instance.
      *
-     * The value depends on constant given on construction of the instance and
-     * cannot be changed later.
+     * The value depends on the constant given on construction of the instance
+     * and cannot be changed.
      *
      * @return Constant value set to be returned for any node.
      */
     public float getValuatorValue() {
-        return valuatorValue;
+        return this.valuatorValue;
     }
 
 }

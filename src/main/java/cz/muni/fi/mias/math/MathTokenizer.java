@@ -63,14 +63,11 @@ public class MathTokenizer extends Tokenizer {
     public static final int TOKEN_TRIM_LENGTH = 20000;
 
     private static final FormulaValuator formulaComplexityValuator = new CountNodesFormulaValuator();
-    /*
-     * Alternatively you can use constant value as the initial rank (weight) of
-     * any input formula (use of constant value results in more accurate 
-     * ranking of documents if two or more formulae of different complexity is 
-     * used in one query):
-     *
-     * private static final FormulaValuator inputFormulaValuator = new ConstantFormulaValuator();
-     */
+    // // Alternatively you can use constant value as the initial rank (weight) of
+    // // any input formula (use of constant value results in more accurate
+    // // ranking of documents if two or more formulae of different complexity is
+    // // used in one query):
+    // private static final FormulaValuator inputFormulaValuator = new ConstantFormulaValuator();
     private static final FormulaValuator inputFormulaValuator = formulaComplexityValuator;
     private static final UnifiedFormulaValuator unifiedNodeValuator = new UnifiedFormulaValuator();
     private static final Map<String, List<String>> ops = MathMLConf.getOperators();
@@ -95,7 +92,13 @@ public class MathTokenizer extends Tokenizer {
     private final boolean subformulae;
     private final MathMLType mmlType;
     private int formulaPosition = 1;
+
+    // formulae filtering befor adding to the index
     private final boolean addTrivialFormulae = false;
+    // Alternatively you can filter formulae with too low weights:
+    // // To the index add only formulae with relative weight comparing to their original formula greater or equal to 10%
+    // private final FormulaFilter formulaFilter = new RelativeWeightFormulaFilter(10.0f);
+    private final FormulaFilter formulaFilter = new NoFilteringFormulaFilter();
 
     // fields with state related to tokenization of current input;
     // fields must be correctly reset in order for this tokenizer to be re-usable
@@ -291,7 +294,7 @@ public class MathTokenizer extends Tokenizer {
     }
 
     private boolean addFormula(int position, Formula formula) {
-        if (addTrivialFormulae || !isTrivial(formula)) {
+        if (formulaFilter.passes(formula) && (addTrivialFormulae || !isTrivial(formula))) {
             formulae.get(position).add(formula);
             return true;
         } else {
@@ -302,7 +305,7 @@ public class MathTokenizer extends Tokenizer {
     private List<Formula> addAllFormulea(List<Formula> collectionToAddTo, List<Formula> formulaeToAdd) {
         List<Formula> nontrivialFormulae = new ArrayList<>();
         for (Formula f : formulaeToAdd) {
-            if (addTrivialFormulae || !isTrivial(f)) {
+            if (formulaFilter.passes(f) && (addTrivialFormulae || !isTrivial(f))) {
                 nontrivialFormulae.add(f);
             }
         }
