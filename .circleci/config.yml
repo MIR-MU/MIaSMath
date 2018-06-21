@@ -34,13 +34,15 @@ jobs:
           set -e
           if [[ ! -e MathMLCan ]]; then
             git clone https://github.com/MIR-MU/MathMLCan.git
-            cd MathMLCan
+            pushd MathMLCan
             mvn clean install
+            popd
           fi
           if [[ ! -e MathMLUnificator ]]; then
             git clone https://github.com/MIR-MU/MathMLUnificator.git
-            cd MathMLUnificator
+            pushd MathMLUnificator
             mvn clean install
+            popd
           fi
           mvn dependency:go-offline
 
