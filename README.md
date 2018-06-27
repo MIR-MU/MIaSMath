@@ -18,8 +18,8 @@ To integrate MIaSMath including MathTokenizer into a Solr instance:
 1. Copy the following libraries to the `solr/lib` directory:
 
   - `jdom2-2.0.3.jar`
-	- [`mathml-canonicalizer.jar`][mathmlcan]
-	- `MIaSMath.jar`
+  - [`mathml-canonicalizer.jar`][mathmlcan]
+  - `MIaSMath.jar`
 
 2. Configure the following attributes in `schema.xml` for the tokenizer
    MathTokenizer:
