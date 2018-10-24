@@ -57,6 +57,13 @@ public class MathTokenizerFactory extends TokenizerFactory {
     }
 
     @Override
+    public Tokenizer create(AttributeFactory factory) {
+        return new MathTokenizer(subformulae, MathTokenizer.MathMLType.BOTH);
+    }
+
+    // Lucene API change in 5.0.0: Removed Reader from Tokenizer constructor
+    // https://lucene.apache.org/core/5_0_0/MIGRATE.html
+    // the following is leftover
     public Tokenizer create(AttributeFactory af, Reader reader) {
         return new MathTokenizer(reader, subformulae, MathTokenizer.MathMLType.BOTH);
     }

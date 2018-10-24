@@ -148,6 +148,22 @@ public class MathTokenizer extends Tokenizer {
     }
 
     /**
+     * This constructor reproduce the {@link #MathTokenizer(Reader, boolean, MathMLType)}
+     * and awaiting a call to {@link #setReader(java.io.Reader)} to provide input.
+     *
+     * @param subformulae
+     * @param type
+     * @see #MathTokenizer(Reader, boolean, MathMLType)
+     */
+    public MathTokenizer(boolean subformulae, MathMLType type) {
+        this.mmlType = type;
+        this.subformulae = subformulae;
+        this.reduceWeighting = subformulae;
+
+        oneWeighting();
+    }
+
+    /**
      * @param input Reader containing the input to process
      * @param subformulae if <em>{@code true}, subformulae will be
      * extracted</em> and weight of derived subformulae (i.e. extracted
@@ -171,12 +187,17 @@ public class MathTokenizer extends Tokenizer {
      * subformulae etc.)
      */
     public MathTokenizer(Reader input, boolean subformulae, MathMLType type, boolean reduceWeighting) {
-        super(input);
+        super();
+        this.setReader(input);
 
         this.mmlType = type;
         this.subformulae = subformulae;
         this.reduceWeighting = reduceWeighting;
 
+        oneWeighting();
+    }
+
+    private void oneWeighting() {
         // For search or equal weighting do not penalize any of formulae we search with
         if (!this.reduceWeighting) {
             lCoef = 1;
