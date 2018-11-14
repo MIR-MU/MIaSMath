@@ -173,6 +173,12 @@
                 <version>2.19</version>
                 <configuration>
                     <argLine>-Xmx4096m</argLine>
+                    <!-- CircleCI issue workaround -->
+                    <!-- Error: Could not find or load main class org.apache.maven.surefire.booter.ForkedBooter -->
+                    <!-- https://discuss.circleci.com/t/circleci-build-failure-on-openjdk-image/26104 -->
+                    <!-- The root cause is a bug in openjdk8 build -->
+                    <!-- https://stackoverflow.com/questions/53010200/maven-surefire-could-not-find-forkedbooter-class/53016532#53016532 -->
+                    <useSystemClassLoader>false</useSystemClassLoader>
                 </configuration>
             </plugin>
         </plugins>
