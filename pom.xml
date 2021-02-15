@@ -36,6 +36,7 @@
             <groupId>cz.muni.fi.mir</groupId>
             <artifactId>mathml-canonicalizer</artifactId>
             <version>1.4.0</version>
+            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>cz.muni.fi.mir</groupId>
