@@ -1,8 +1,8 @@
 MIaSMath – Math processing for [Lucene][] / [Solr][]
 ====================================================
-[![CircleCI](https://circleci.com/gh/MIR-MU/MIaSMath/tree/master.svg?style=shield)][ci]
+[![ci](https://github.com/MIR-MU/MIaSMath/workflows/Build/badge.svg)][ci]
 
- [ci]: https://circleci.com/gh/MIR-MU/MIaSMath/tree/master (CircleCI)
+ [ci]: https://github.com/MIR-MU/MIaSMath/actions (GitHub Actions)
 
 [MIaSMath][mias] is a math processing plugin for [Lucene][] or [Solr][].
 
