@@ -50,7 +50,7 @@ public class PayloadHelper extends org.apache.lucene.analysis.payloads.PayloadHe
      * Converts byte array to float number
      */
     public static float decodeFloatFromShortBytes(byte[] bytes) {
-        float result = (float) decodeShort(bytes);
+        float result = (float) decodeShort(bytes) + 32768;
         return result / 10000;
     }
 

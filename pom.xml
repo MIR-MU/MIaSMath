@@ -44,6 +44,7 @@
             <groupId>cz.muni.fi.mir</groupId>
             <artifactId>mathml-canonicalizer</artifactId>
             <version>1.4.0</version>
+            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>cz.muni.fi.mir</groupId>
@@ -54,14 +55,14 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.18</version>
+            <version>1.19</version>
             <scope>test</scope>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -71,7 +72,7 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.6.2</version>
+            <version>2.13.2</version>
         </dependency>
         
     </dependencies>
@@ -181,6 +182,12 @@
                 <version>2.19</version>
                 <configuration>
                     <argLine>-Xmx4096m</argLine>
+                    <!-- CircleCI issue workaround -->
+                    <!-- Error: Could not find or load main class org.apache.maven.surefire.booter.ForkedBooter -->
+                    <!-- https://discuss.circleci.com/t/circleci-build-failure-on-openjdk-image/26104 -->
+                    <!-- The root cause is a bug in openjdk8 build -->
+                    <!-- https://stackoverflow.com/questions/53010200/maven-surefire-could-not-find-forkedbooter-class/53016532#53016532 -->
+                    <useSystemClassLoader>false</useSystemClassLoader>
                 </configuration>
             </plugin>
         </plugins>
