@@ -16,7 +16,6 @@
 package cz.muni.fi.mias;
 
 import cz.muni.fi.mias.math.MathTokenizer;
-import java.io.Reader;
 import java.util.Map;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.util.TokenizerFactory;
@@ -48,17 +47,13 @@ import org.apache.lucene.util.AttributeFactory;
  */
 public class MathTokenizerFactory extends TokenizerFactory {
 
-    private final boolean subformulae;
-
-    public MathTokenizerFactory(Map<String, String> args) {
+    public MathTokenizerFactory(Map<String, String> args)
+    {
         super(args);
-        String subforms = args.get("subformulae");
-        subformulae = Boolean.parseBoolean(subforms);
     }
 
     @Override
-    public Tokenizer create(AttributeFactory af, Reader reader) {
-        return new MathTokenizer(reader, subformulae, MathTokenizer.MathMLType.BOTH);
+    public final Tokenizer create(AttributeFactory af) {
+        return new MathTokenizer(af, true, MathTokenizer.MathMLType.BOTH);
     }
-
 }

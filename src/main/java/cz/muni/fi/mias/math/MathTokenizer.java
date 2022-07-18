@@ -34,6 +34,7 @@ import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.util.AttributeFactory;
 import org.apache.lucene.util.BytesRef;
 import org.jdom2.output.DOMOutputter;
 import org.w3c.dom.Document;
@@ -158,8 +159,8 @@ public class MathTokenizer extends Tokenizer {
      * reduced</em>.
      * @param type type of MathML that should be processed
      */
-    public MathTokenizer(Reader input, boolean subformulae, MathMLType type) {
-        this(input, subformulae, type, subformulae);
+    public MathTokenizer(AttributeFactory af, boolean subformulae, MathMLType type) {
+        this(af, subformulae, type, subformulae);
     }
 
     /**
@@ -170,8 +171,8 @@ public class MathTokenizer extends Tokenizer {
      * subformulae (i.e. variants with unified variables, constants, extracted
      * subformulae etc.)
      */
-    public MathTokenizer(Reader input, boolean subformulae, MathMLType type, boolean reduceWeighting) {
-        super(input);
+    public MathTokenizer(AttributeFactory af, boolean subformulae, MathMLType type, boolean reduceWeighting) {
+        super(af);
 
         this.mmlType = type;
         this.subformulae = subformulae;
