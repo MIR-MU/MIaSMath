@@ -9,13 +9,13 @@ jobs:
     steps:
     - uses: actions/setup-java@v1
       with:
-        java-version: '8'
+        java-version: '21'
     - uses: actions/checkout@v2
       with:
         repository: MIR-MU/MathMLCan
     - run: mvn clean install
     - run: mvn integration-test
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v7
       with:
         name: MathMLCan
         path: .
@@ -24,13 +24,13 @@ jobs:
     steps:
     - uses: actions/setup-java@v1
       with:
-        java-version: '8'
+        java-version: '21'
     - uses: actions/checkout@v2
       with:
-        repository: MIR-MU/MathMLUnificator
+        repository: fsi-open/MathMLUnificator
     - run: mvn clean install
     - run: mvn integration-test
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v7
       with:
         name: MathMLUnificator
         path: .
@@ -40,13 +40,13 @@ jobs:
     steps:
     - uses: actions/setup-java@v1
       with:
-        java-version: '8'
-    - uses: actions/download-artifact@v2
+        java-version: '21'
+    - uses: actions/download-artifact@v7
       with:
         name: MathMLCan
         path: MathMLCan
     - run: mvn install -f MathMLCan/pom.xml
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v7
       with:
         name: MathMLUnificator
         path: MathMLUnificator
@@ -54,7 +54,7 @@ jobs:
     - uses: actions/checkout@v2
     - run: mvn clean install
     - run: mvn integration-test
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v7
       with:
         name: MIaSMath
         path: .

@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import org.apache.commons.compress.utils.CharsetNames;
 import org.apache.commons.io.IOUtils;
+import org.apache.lucene.util.AttributeFactory;
 import org.junit.*;
 
 public class MathTokenizerTest {
@@ -17,7 +18,8 @@ public class MathTokenizerTest {
     @Test
     public void stressTest() throws Exception {
         Reader reader = readResource(HUGE_MATHML);
-        MathTokenizer tokenizer = new MathTokenizer(reader, true, MathTokenizer.MathMLType.BOTH);
+        MathTokenizer tokenizer = new MathTokenizer(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY, true, MathTokenizer.MathMLType.BOTH);
+        tokenizer.setReader(reader);
 
         TimeLogger logger = new TimeLogger();
 

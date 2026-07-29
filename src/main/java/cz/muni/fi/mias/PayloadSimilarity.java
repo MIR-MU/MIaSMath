@@ -16,7 +16,7 @@
 package cz.muni.fi.mias;
 
 import cz.muni.fi.mias.math.PayloadHelper;
-import org.apache.lucene.search.similarities.DefaultSimilarity;
+import org.apache.lucene.search.similarities.ClassicSimilarity;
 import org.apache.lucene.util.BytesRef;
 
 /**
@@ -26,9 +26,8 @@ import org.apache.lucene.util.BytesRef;
  *
  * @author Martin Liska
  */
-public class PayloadSimilarity extends DefaultSimilarity {
+public class PayloadSimilarity extends ClassicSimilarity {
 
-    @Override
     public float scorePayload(int docId, int start, int end, BytesRef byteRef) {
         float score = 1.0F;
         if (byteRef.bytes != BytesRef.EMPTY_BYTES) {
