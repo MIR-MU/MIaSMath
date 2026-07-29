@@ -27,7 +27,7 @@ jobs:
         java-version: '21'
     - uses: actions/checkout@v2
       with:
-        repository: MIR-MU/MathMLUnificator
+        repository: fsi-open/MathMLUnificator
     - run: mvn clean install
     - run: mvn integration-test
     - uses: actions/upload-artifact@v7
